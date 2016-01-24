@@ -63,6 +63,9 @@ function prepare_table.triangle(element)
     shape.ymax, shape.ymin = max(y2, max(y1, y0)), min(y2, min(y1, y0))
 end
 
+function prepare_table.circle(element)
+end
+
 -- prepare scene for sampling and return modified scene
 local function preparescene(scene)
 
@@ -99,6 +102,10 @@ function sample_table.triangle(element, x, y)
     else
         return BGColor
     end
+end
+
+function sample_table.circle(element, x, y)
+    return element.paint.data
 end
 
 -- sample scene at x,y and return r,g,b,a
