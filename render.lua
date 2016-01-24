@@ -7,7 +7,9 @@ local unpack, pack = table.unpack, table.pack
 local max, min, floor = math.max, math.min, math.floor
 
 local _M = driver.new()
+
 local BGColor = require("lua.color").rgb8(1,1,1,1)
+local epsilon, max_iteration = 0.000000000001, 50
 
 -----------------------------------------------------------------------------------------
 -------------------------------- AUXILIAR FUNCTIONS -------------------------------------
@@ -28,6 +30,26 @@ local function truncate_parameter(t)
     elseif t > 1 or t == -math.huge then t = 1
     end
     return t
+end
+
+local function root_bisection(t0, t1, func)
+    local tm = (t0 + t1)*0.5
+
+    -- Halting criterium
+    local delta = t1 - t0
+    if delta < epsilon then return tm end
+
+    -- Recursively subdivide
+    local y = func(tm)
+    local sy = sign(y)
+
+    if sy == sign( func(t0) ) then
+        return root_bisection(tm, t1, func)
+    elseif sy == sign( func(t1) ) then 
+        return root_bisection(t0, tm, func)
+    elseif y == 0 then 
+        return tm
+    end
 end
 
 -----------------------------------------------------------------------------------------
@@ -87,6 +109,7 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n].x0, holder[n].y0 = u0, v0
     holder[n].x1, holder[n].y1 = u1, v1
     holder[n].x2, holder[n].y2 = u2, v2
+    holder[n].dysign = sign(v2 - v0)
 
     local maxy, miny = max(v0, v2), min(v0, v2)
     local maxx, minx = max(u0, u2), min(u0, u2)
@@ -252,6 +275,8 @@ end
 local sample_table = {}
 sample_table.sample_path = {}
 
+-- TODO: MUST FUSION ALL THESE TESTS AFTER
+
 function sample_table.sample_path.linear_segment(primitive, x, y)
     -- Bounding box tests
     if y >= primitive.ymax or y < primitive.ymin then return 0 end
@@ -274,6 +299,27 @@ function sample_table.sample_path.degenerate_segment(primitive, x, y)
 end
 
 function sample_table.sample_path.quadratic_segment(primitive, x, y)
+
+    -- Bounding box test
+    if y >= primitive.ymax or y < primitive.ymin then return 0 end
+    if x > primitive.xmax then return 0 end
+    if x <= primitive.xmin then return primitive.dysign end
+
+    local x0, y0 = primitive.x0, primitive.y0
+    local x1, y1 = primitive.x1, primitive.y1
+    local x2, y2 = primitive.x2, primitive.y2
+
+    -- Compute intersection (evaluate with Horner's scheme is faster)
+    local func = function(t)
+        local _x, _y = bezier.at2(t, x0, y0, x1, y1, x2, y2)
+        return _y - y
+    end
+
+    local _t = root_bisection(0, 1, func)
+    local _x, _y = bezier.at2(_t, x0, y0, x1, y1, x2, y2)
+
+    if x < _x then return primitive.dysign
+    else return 0 end
 end
 
 -----------------------------------------------------------------------------------------
