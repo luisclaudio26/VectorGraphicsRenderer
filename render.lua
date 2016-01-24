@@ -173,7 +173,6 @@ function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
 
     local primitives, data = shape.primitives, shape.data
 
-    data[offset], data[offset+1] = transform_point(data[offset], data[offset+1], shape.xf)
     data[offset+2], data[offset+3] = transform_point(data[offset+2], data[offset+3], shape.xf)
     data[offset+4], data[offset+5] = transform_point(data[offset+4], data[offset+5], shape.xf)
 
@@ -315,10 +314,10 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
         return _y - y
     end
 
-    local _t = root_bisection(0, 1, func)
-    local _x, _y = bezier.at2(_t, x0, y0, x1, y1, x2, y2)
+    t_ = root_bisection(0, 1, function(t) return y0*(1-t)^2 + 2*(1-t)*t*y1 + y2*t^2 - y end )
+    x_ = x0*(1-t_)^2 + 2*(1-t_)*t_*x1 + x2*t_^2
 
-    if x < _x then return primitive.dysign
+    if x < x_ then return primitive.dysign
     else return 0 end
 end
 
