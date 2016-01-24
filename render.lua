@@ -9,6 +9,15 @@ local _M = driver.new()
 local BGColor = require("lua.color").rgb8(1,1,1,1)
 
 -----------------------------------------------------------------------------------------
+-------------------------------- AUXILIAR FUNCTION --------------------------------------
+-----------------------------------------------------------------------------------------
+local function sign(v)
+    if v < 0 then return -1
+    elseif v > 0 then return 1
+    else return 0
+end
+
+-----------------------------------------------------------------------------------------
 -------------------------------- PREPROCESSING ------------------------------------------
 -----------------------------------------------------------------------------------------
 local prepare_table = {}
@@ -57,6 +66,15 @@ end
 local sample_table = {}
 
 function sample_table.triangle(element, x, y)
+    local implicit = element.shape.implicit
+
+    local edge_sign = {}
+    for i = 1, 3 do
+        edge_sign[i] = implicit[i].a*x + implicit[i].b*y + implicit[i].c
+    end
+
+
+
     return element.paint.data
 end
 
