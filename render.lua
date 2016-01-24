@@ -212,9 +212,22 @@ function sample_table.circle(element, x, y)
 end
 
 function sample_table.path(element, x, y)
+    local primitives = element.shape.primitives
 
-    return element.paint.data
+    local count = 0
+    for i,prim in ipairs(primitives) do
 
+    end
+
+    local paint_flag
+    if element.type == "fill" then
+        paint_flag = (count ~= 0)
+    elseif element.type == "eofill" then
+        paint_flag = (count % 2 ~= 0)
+    end
+
+    if paint_flag == true then return element.paint.data
+    else return BGColor end
 end
 
 -- sample scene at x,y and return r,g,b,a
