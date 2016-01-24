@@ -70,7 +70,7 @@ function sample_table.triangle(element, x, y)
 
     local edge_sign = {}
     for i = 1, 3 do
-        edge_sign[i] = implicit[i].a*x + implicit[i].b*y + implicit[i].c
+        edge_sign[i] = sign( implicit[i].a*x + implicit[i].b*y + implicit[i].c )
     end
 
     if edge_sign[1] == edge_sign[2] and edge_sign[2] == edge_sign[3] then
