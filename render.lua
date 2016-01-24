@@ -7,14 +7,29 @@ local floor = math.floor
 
 local _M = driver.new()
 
--- these are the two functions that you need to modify/implement
+-----------------------------------------------------------------------------------------
+-------------------------------- PREPROCESSING ------------------------------------------
+-----------------------------------------------------------------------------------------
+local prepare_table = {}
+
+function prepare_table.triangle(element)
+
+end
 
 -- prepare scene for sampling and return modified scene
 local function preparescene(scene)
-    -- implement your own version
+
+    for i, element in ipairs(scene.elements) do
+        element.shape.xf = scene.xf * element.shape.xf
+        prepare_table[element.shape.type](element)
+    end
+
     return scene
 end
 
+-----------------------------------------------------------------------------------------
+--------------------------------------- SAMPLE ------------------------------------------
+-----------------------------------------------------------------------------------------
 -- sample scene at x,y and return r,g,b,a
 local function sample(scene, x, y)
     -- implement your own version
@@ -22,6 +37,9 @@ local function sample(scene, x, y)
     return 1,1,1,1
 end
 
+-----------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
 -- verifies that there is nothing unsupported in the scene
 local function checkscene(scene)
     for i, element in ipairs(scene.elements) do
