@@ -14,7 +14,7 @@ local BGColor = require("lua.color").rgb8(1,1,1,1)
 local function sign(v)
     if v < 0 then return -1
     elseif v > 0 then return 1
-    else return 0
+    else return 0 end
 end
 
 -----------------------------------------------------------------------------------------
@@ -73,9 +73,11 @@ function sample_table.triangle(element, x, y)
         edge_sign[i] = implicit[i].a*x + implicit[i].b*y + implicit[i].c
     end
 
-
-
-    return element.paint.data
+    if edge_sign[1] == edge_sign[2] and edge_sign[2] == edge_sign[3] then
+        return element.paint.data
+    else
+        return BGColor
+    end
 end
 
 -- sample scene at x,y and return r,g,b,a
