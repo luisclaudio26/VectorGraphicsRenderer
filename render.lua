@@ -118,8 +118,12 @@ end
 function prepare_table.instructions.degenerate_segment(shape, offset, iadd)
     local primitives, data = shape.primitives, shape.data
 
+    -- dx/dy are not valid after transformations! Is this too much of a problem?
     prepare_table.push_functions.degenerate_segment(data[offset], data[offset+1], data[offset+2], 
                                         data[offset+3], data[offset+4], data[offset+5], primitives)
+end
+
+function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
 end
 
 -----------------------------------------------------------------------------------------
@@ -218,6 +222,9 @@ function sample_table.sample_path.degenerate_segment(primitive, x, y)
     else
         return 0
     end
+end
+
+function sample_table.sample_path.quadratic_segment(primitive, x, y)
 end
 
 -----------------------------------------------------------------------------------------
