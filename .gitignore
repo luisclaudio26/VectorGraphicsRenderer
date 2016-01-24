@@ -1,0 +1,10 @@
+*.svg
+*.png
+*.dll
+*.exe
+*.bat
+*.zip
+lua/
+Rendered/
+SVG/
+rendered/
