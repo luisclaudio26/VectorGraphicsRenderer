@@ -28,6 +28,8 @@ end
 local prepare_table = {}
 
 function prepare_table.triangle(element)
+    -- We can a transformation that maps to a canonical 
+    --triangle for speed!
     local shape = element.shape
 
     -- Transform vertices
@@ -64,6 +66,10 @@ function prepare_table.triangle(element)
 end
 
 function prepare_table.circle(element)
+    -- Precompute inverse (we could precompute a transformation
+    -- which maps to a canonical circle, also)
+    local shape = element.shape
+    shape.inversexf = shape.xf : inverse()
 end
 
 -- prepare scene for sampling and return modified scene
