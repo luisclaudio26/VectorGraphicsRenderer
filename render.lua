@@ -27,11 +27,59 @@ end
 -----------------------------------------------------------------------------------------
 local prepare_table = {}
 prepare_table.instructions = {}
+prepare_table.push_functions = {}
 
+--------------------------------
+------ Push primitives ---------
+--------------------------------
+function prepare_table.push_functions.linear_segment(x0, y0, x1, y1, holder, virtual)
+    
+    -- Virtual flag: a Virtual linear segment must be considered when filling
+    -- the shape, but not if we're stroking. This is just a "fake" linear segment
+    -- we use to close and open path when we need to fill it.
+    
+    local n = #holder + 1
+    holder[n] = {}
+
+    holder[n].type = "linear_segment"
+    holder[n].virtal = virtual
+    holder[n].x0, holder[n].y0 = x0, y0
+    holder[n].x1, holder[n].y1 = x1, y1
+
+    -- Precompute implicit equation and bounding box
+    local a = y1 - y0
+    local b = x0 - x1
+    local c = -a * x0 - b * y0
+    local dysign = sign(a)
+    a, b, c = a*dysign, b*dysign, c*dysign
+
+    local xmin, xmax = min(x0, x1), max(x0, x1)
+    local ymin, ymax = min(y0, y1), max(y0, y1)
+
+    holder[n].a, holder[n].b, holder[n].c = a, b, c
+    holder[n].dysign = dysign
+    holder[n].xmin, holder[n].xmax = xmin, xmax
+    holder[n].ymin, holder[n].ymax = ymin, ymax
+end
+
+--------------------------------
+--------- Instructions ---------
+--------------------------------
 function prepare_table.instructions.begin_closed_contour(shape, offset, iadd)
+    local xf, data = shape.xf, shape.data
+    data[offset+1], data[offset+2] = transform_point(data[offset+1], data[offset+2], xf)
 end
 
 function prepare_table.instructions.end_closed_contour(shape, offset, iadd)
+    -- Fetch first vertice and then add closing edge
+    local data = shape.data
+    local x, y = data[offset], data[offset+1]
+
+    local instr_offset = data[offset + 2]
+    local closing_instruction = shape.offsets[iadd - instr_offset]
+    local first_x, first_y = data[closing_instruction+1], data[closing_instruction+2]
+
+    prepare_table.push_functions.linear_segment(x, y, first_x, first_y, shape.primitives, false)
 end
 
 function prepare_table.instructions.begin_open_contour(shape, offset, iadd)
@@ -41,6 +89,16 @@ function prepare_table.instructions.end_open_contour(shape, offset, iadd)
 end
 
 function prepare_table.instructions.linear_segment(shape, offset, iadd)
+    local data = shape.data
+
+    -- If everything went well, first point was already transformed
+    -- (by a begin_xxxx_contour instruction, for example)
+    data[offset+2], data[offset+3] = transform_point(data[offset+2], data[offset+3], shape.xf)
+
+    local x0, y0 = data[offset], data[offset+1]
+    local x1, y1 = data[offset+2], data[offset+3]
+
+    prepare_table.push_functions.linear_segment(x0, y0, x1, y1, shape.primitives, false)
 end
 
 -----------------------------------------------------------------------------------------
