@@ -83,9 +83,13 @@ function prepare_table.instructions.end_closed_contour(shape, offset, iadd)
 end
 
 function prepare_table.instructions.begin_open_contour(shape, offset, iadd)
+    prepare_table.instructions.begin_closed_contour(shape, offset, iadd)
 end
 
 function prepare_table.instructions.end_open_contour(shape, offset, iadd)
+    -- Do the same as end_closed_contour, but mark last edge as Virtual
+    prepare_table.instructions.end_closed_contour(shape, offset, iadd)
+    shape.primitives[ #shape.primitives ].virtual = true
 end
 
 function prepare_table.instructions.linear_segment(shape, offset, iadd)
@@ -179,14 +183,10 @@ local sample_table = {}
 sample_table.sample_path = {}
 
 function sample_table.sample_path.linear_segment(primitive, x, y)
-
-    local xmin, xmax = primitive.xmin, primitive.xmax
-    local ymin, ymax = primitive.ymin, primitive.ymax
-
     -- Bounding box tests
-    if y >= ymax or y < ymin then return 0 end
-    if x > xmax then return 0 end
-    if x <= xmin then return primitive.dysign end
+    if y >= primitive.ymax or y < primitive.ymin then return 0 end
+    if x > primitive.xmax then return 0 end
+    if x <= primitive.xmin then return primitive.dysign end
 
     -- Implicit test
     local eval = sign( primitive.a * x + primitive.b * y + primitive.c )
