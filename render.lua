@@ -17,6 +17,11 @@ local function sign(v)
     else return 0 end
 end
 
+local function transform_point(x, y, xf)
+    local _x, _y, w = xf : apply(x, y, 1)
+    return _x / w, _y / w
+end
+
 -----------------------------------------------------------------------------------------
 -------------------------------- PREPROCESSING ------------------------------------------
 -----------------------------------------------------------------------------------------
@@ -25,11 +30,16 @@ local prepare_table = {}
 function prepare_table.triangle(element)
     local shape = element.shape
 
-    -- Precompute implicit edges
+    -- Transform vertices
     local x0, y0 = shape.x1, shape.y1
     local x1, y1 = shape.x2, shape.y2
     local x2, y2 = shape.x3, shape.y3
 
+    x0, y0 = transform_point(x0, y0, shape.xf)
+    x1, y1 = transform_point(x1, y1, shape.xf)
+    x2, y2 = transform_point(x2, y2, shape.xf)
+
+    -- Precompute implicit edges    
     shape.implicit = {}
     
     local compute_implicit = function(x0, y0, x1, y1)
