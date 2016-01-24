@@ -173,9 +173,31 @@ local function preparescene(scene)
 end
 
 -----------------------------------------------------------------------------------------
---------------------------------------- SAMPLE ------------------------------------------
+-------------------------------- PATH SAMPLING ------------------------------------------
 -----------------------------------------------------------------------------------------
 local sample_table = {}
+sample_table.sample_path = {}
+
+function sample_table.sample_path.linear_segment(primitive, x, y)
+
+    local xmin, xmax = primitive.xmin, primitive.xmax
+    local ymin, ymax = primitive.ymin, primitive.ymax
+
+    -- Bounding box tests
+    if y >= ymax or y < ymin then return 0 end
+    if x > xmax then return 0 end
+    if x <= xmin then return primitive.dysign end
+
+    -- Implicit test
+    local eval = sign( primitive.a * x + primitive.b * y + primitive.c )
+
+    if eval < 0 then return primitive.dysign
+    else return 0 end
+end
+
+-----------------------------------------------------------------------------------------
+--------------------------------------- SAMPLE ------------------------------------------
+-----------------------------------------------------------------------------------------
 
 function sample_table.triangle(element, x, y)
     local implicit = element.shape.implicit
@@ -212,11 +234,11 @@ function sample_table.circle(element, x, y)
 end
 
 function sample_table.path(element, x, y)
-    local primitives = element.shape.primitives
+    local shape, primitives = element.shape, element.shape.primitives
 
     local count = 0
     for i,prim in ipairs(primitives) do
-
+        count = count + sample_table.sample_path[prim.type](prim, x, y)
     end
 
     local paint_flag
