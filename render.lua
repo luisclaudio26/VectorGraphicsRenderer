@@ -9,7 +9,7 @@ local _M = driver.new()
 local BGColor = require("lua.color").rgb8(1,1,1,1)
 
 -----------------------------------------------------------------------------------------
--------------------------------- AUXILIAR FUNCTION --------------------------------------
+-------------------------------- AUXILIAR FUNCTIONS -------------------------------------
 -----------------------------------------------------------------------------------------
 local function sign(v)
     if v < 0 then return -1
@@ -23,10 +23,29 @@ local function transform_point(x, y, xf)
 end
 
 -----------------------------------------------------------------------------------------
--------------------------------- PREPROCESSING ------------------------------------------
+-------------------------------- PATH PREPROCESSING -------------------------------------
 -----------------------------------------------------------------------------------------
 local prepare_table = {}
+prepare_table.instructions = {}
 
+function prepare_table.instructions.begin_closed_contour(shape, offset, iadd)
+end
+
+function prepare_table.instructions.end_closed_contour(shape, offset, iadd)
+end
+
+function prepare_table.instructions.begin_open_contour(shape, offset, iadd)
+end
+
+function prepare_table.instructions.end_open_contour(shape, offset, iadd)
+end
+
+function prepare_table.instructions.linear_segment(shape, offset, iadd)
+end
+
+-----------------------------------------------------------------------------------------
+-------------------------------- PREPROCESSING ------------------------------------------
+-----------------------------------------------------------------------------------------
 function prepare_table.triangle(element)
     -- We can a transformation that maps to a canonical 
     --triangle for speed!
@@ -70,6 +89,18 @@ function prepare_table.circle(element)
     -- which maps to a canonical circle, also)
     local shape = element.shape
     shape.inversexf = shape.xf : inverse()
+end
+
+function prepare_table.path(element)
+    local shape = element.shape
+    shape.primitives = {}
+
+    -- Build primitives
+    for i, v in ipairs(shape.instructions) do
+        print(v)
+        local offset = shape.offsets[i]
+        prepare_table.instructions[v](shape, offset, i)
+    end
 end
 
 -- prepare scene for sampling and return modified scene
@@ -120,6 +151,12 @@ function sample_table.circle(element, x, y)
 
     if d <= r then return element.paint.data
     else return BGColor end
+end
+
+function sample_table.path(element, x, y)
+
+    return element.paint.data
+
 end
 
 -- sample scene at x,y and return r,g,b,a
