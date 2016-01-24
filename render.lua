@@ -13,7 +13,30 @@ local _M = driver.new()
 local prepare_table = {}
 
 function prepare_table.triangle(element)
+    local shape = element.shape
 
+    -- Precompute implicit edges
+    local x0, y0 = shape.x1, shape.y1
+    local x1, y1 = shape.x2, shape.y2
+    local x2, y2 = shape.x3, shape.y3
+
+    shape.implicit = {}
+    
+    local compute_implicit = function(x0, y0, x1, y1)
+        
+        local a, b= y1-y0, -(x1-x0)
+        local c = -a*x0-b*y0
+
+        local n = #shape.implicit+1
+        shape.implicit[n] = {}
+        shape.implicit[n].a = a
+        shape.implicit[n].b = b
+        shape.implicit[n].c = c
+    end
+
+    compute_implicit(x0, y0, x1, y1)
+    compute_implicit(x1, y1, x2, y2)
+    compute_implicit(x2, y2, x0, y0)
 end
 
 -- prepare scene for sampling and return modified scene
