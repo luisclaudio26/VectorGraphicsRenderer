@@ -111,7 +111,15 @@ function sample_table.triangle(element, x, y)
 end
 
 function sample_table.circle(element, x, y)
-    return element.paint.data
+    local shape = element.shape
+    local cx, cy, r = shape.cx, shape.cy, shape.r
+
+    -- Map point to untransformed circle
+    tx, ty = transform_point(x, y, shape.inversexf)
+    local d = math.sqrt( (cx-tx)^2 + (cy-ty)^2 )
+
+    if d <= r then return element.paint.data
+    else return BGColor end
 end
 
 -- sample scene at x,y and return r,g,b,a
