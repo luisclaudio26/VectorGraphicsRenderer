@@ -81,6 +81,18 @@ function prepare_table.push_functions.degenerate_segment(x0, y0, dx0, dy0, dx1, 
 end
 
 function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, holder)
+    local n = #holder + 1 
+    holder[n] = {}
+    holder[n].type = "quadratic_segment"
+    holder[n].x0, holder[n].y0 = u0, v0
+    holder[n].x1, holder[n].y1 = u1, v1
+    holder[n].x2, holder[n].y2 = u2, v2
+
+    local maxy, miny = max(v0, v2), min(v0, v2)
+    local maxx, minx = max(u0, u2), min(u0, u2)
+
+    holder[n].xmax, holder[n].xmin = maxx, minx
+    holder[n].ymax, holder[n].ymin = maxy, miny
 end
 
 --------------------------------
