@@ -62,6 +62,16 @@ function prepare_table.push_functions.linear_segment(x0, y0, x1, y1, holder, vir
     holder[n].ymin, holder[n].ymax = ymin, ymax
 end
 
+function prepare_table.push_functions.degenerate_segment(x0, y0, dx0, dy0, dx1, dy1, holder)
+    local n = #holder + 1
+    holder[n] = {}
+
+    holder[n].type = "degenerate_segment"
+    holder[n].x, holder[n].y = x0, y0
+    holder[n].dx0, holder[n].dy0 = dx0, dy0
+    holder[n].dx1, holder[n].dy1 = dx1, dy1
+end
+
 --------------------------------
 --------- Instructions ---------
 --------------------------------
@@ -103,6 +113,13 @@ function prepare_table.instructions.linear_segment(shape, offset, iadd)
     local x1, y1 = data[offset+2], data[offset+3]
 
     prepare_table.push_functions.linear_segment(x0, y0, x1, y1, shape.primitives, false)
+end
+
+function prepare_table.instructions.degenerate_segment(shape, offset, iadd)
+    local primitives, data = shape.primitives, shape.data
+
+    prepare_table.push_functions.degenerate_segment(data[offset], data[offset+1], data[offset+2], 
+                                        data[offset+3], data[offset+4], data[offset+5], primitives)
 end
 
 -----------------------------------------------------------------------------------------
@@ -159,7 +176,7 @@ function prepare_table.path(element)
 
     -- Build primitives
     for i, v in ipairs(shape.instructions) do
-        print(v)
+        --print(v)
         local offset = shape.offsets[i]
         prepare_table.instructions[v](shape, offset, i)
     end
@@ -193,6 +210,14 @@ function sample_table.sample_path.linear_segment(primitive, x, y)
 
     if eval < 0 then return primitive.dysign
     else return 0 end
+end
+
+function sample_table.sample_path.degenerate_segment(primitive, x, y)
+    if y == primitive.y and x <= primitive.x then
+        return sign (primitive.dy0 )
+    else
+        return 0
+    end
 end
 
 -----------------------------------------------------------------------------------------
