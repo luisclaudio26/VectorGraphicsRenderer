@@ -3,7 +3,7 @@ local image = require"image"
 local chronos = require"chronos"
 
 local unpack, pack = table.unpack, table.pack
-local floor = math.floor
+local max, min, floor = math.max, math.min, math.floor
 
 local _M = driver.new()
 local BGColor = require("lua.color").rgb8(1,1,1,1)
@@ -47,6 +47,10 @@ function prepare_table.triangle(element)
     compute_implicit(x0, y0, x1, y1)
     compute_implicit(x1, y1, x2, y2)
     compute_implicit(x2, y2, x0, y0)
+
+    -- Bounding box info
+    shape.xmax, shape.xmin = max(x2, max(x1, x0)), min(x2, min(x1, x0))
+    shape.ymax, shape.ymin = max(y2, max(y1, y0)), min(y2, min(y1, y0))
 end
 
 -- prepare scene for sampling and return modified scene
@@ -67,7 +71,14 @@ local sample_table = {}
 
 function sample_table.triangle(element, x, y)
     local implicit = element.shape.implicit
+    local xmin, xmax = element.shape.xmin, element.shape.xmax
+    local ymin, ymax = element.shape.ymin, element.shape.ymax
 
+    -- Bounding box tests (closed bottom, open top, closed right, open left)
+    if y < ymin or y >= ymax then return BGColor end
+    if x <= xmin or x > xmax then return BGColor end
+
+    -- Implicit test
     local edge_sign = {}
     for i = 1, 3 do
         edge_sign[i] = sign( implicit[i].a*x + implicit[i].b*y + implicit[i].c )
