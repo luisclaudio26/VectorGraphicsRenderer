@@ -2,6 +2,7 @@ local driver = require"driver"
 local image = require"image"
 local chronos = require"chronos"
 
+local bezier = require("lua.bezier")
 local unpack, pack = table.unpack, table.pack
 local max, min, floor = math.max, math.min, math.floor
 
@@ -20,6 +21,13 @@ end
 local function transform_point(x, y, xf)
     local _x, _y, w = xf : apply(x, y, 1)
     return _x / w, _y / w
+end
+
+local function truncate_parameter(t)
+    if t < 0 or t == math.huge then t = 0 --????
+    elseif t > 1 or t == -math.huge then t = 1
+    end
+    return t
 end
 
 -----------------------------------------------------------------------------------------
@@ -70,6 +78,9 @@ function prepare_table.push_functions.degenerate_segment(x0, y0, dx0, dy0, dx1, 
     holder[n].x, holder[n].y = x0, y0
     holder[n].dx0, holder[n].dy0 = dx0, dy0
     holder[n].dx1, holder[n].dy1 = dx1, dy1
+end
+
+function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, holder)
 end
 
 --------------------------------
@@ -124,6 +135,32 @@ function prepare_table.instructions.degenerate_segment(shape, offset, iadd)
 end
 
 function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
+
+    local primitives, data = shape.primitives, shape.data
+
+    data[offset], data[offset+1] = transform_point(data[offset], data[offset+1], shape.xf)
+    data[offset+2], data[offset+3] = transform_point(data[offset+2], data[offset+3], shape.xf)
+    data[offset+4], data[offset+5] = transform_point(data[offset+4], data[offset+5], shape.xf)
+
+    local x0, y0 = data[offset], data[offset+1]
+    local x1, y1 = data[offset+2], data[offset+3]
+    local x2, y2 = data[offset+4], data[offset+5]
+
+    -- Calculate maxima points
+    local t = {}
+    t[1], t[4] = 0, 1
+    t[2] = truncate_parameter( (x0-x1) / (x0 - 2*x1 + x2) )
+    t[3] = truncate_parameter( (y0-y1) / (y0 - 2*y1 + y2) )
+    table.sort( t )
+
+    -- Split bézier
+    for i = 2, 4 do
+        if t[i-1] ~= t[i] then
+            u0, v0, u1, v1, u2, v2 = bezier.cut2(t[i-1], t[i], x0, y0, x1, y1, x2, y2)
+            prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, primitives)
+        end
+    end
+
 end
 
 -----------------------------------------------------------------------------------------
