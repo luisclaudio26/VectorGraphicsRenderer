@@ -2,10 +2,11 @@ local driver = require"driver"
 local image = require"image"
 local chronos = require"chronos"
 
-local unpack = table.unpack
+local unpack, pack = table.unpack, table.pack
 local floor = math.floor
 
 local _M = driver.new()
+local BGColor = require("lua.color").rgb8(1,1,1,1)
 
 -----------------------------------------------------------------------------------------
 -------------------------------- PREPROCESSING ------------------------------------------
@@ -53,11 +54,24 @@ end
 -----------------------------------------------------------------------------------------
 --------------------------------------- SAMPLE ------------------------------------------
 -----------------------------------------------------------------------------------------
+local sample_table = {}
+
+function sample_table.triangle(element, x, y)
+    return element.paint.data
+end
+
 -- sample scene at x,y and return r,g,b,a
 local function sample(scene, x, y)
-    -- implement your own version
-    -- assume a white background
-    return 1,1,1,1
+    
+    for i = #scene.elements, 1, -1 do
+        local element = scene.elements[i]
+        local temp = sample_table[element.shape.type](element, x, y)
+
+        -- Superpose images
+        if temp ~= BGColor then return unpack(temp) end
+    end
+
+    return unpack(BGColor)
 end
 
 -----------------------------------------------------------------------------------------
