@@ -52,18 +52,6 @@ local function root_bisection(t0, t1, func)
     end
 end
 
-local function horner_scheme(x, ...)
-
-    local coef = {...}
-    local n = #coef
-
-    local out = coef[n]
-    for i = n-1, 1, -1 do
-        out = x*out + coef[n]
-    end
-    return out
-end
-
 -----------------------------------------------------------------------------------------
 -------------------------------- PATH PREPROCESSING -------------------------------------
 -----------------------------------------------------------------------------------------
@@ -321,7 +309,7 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x2, y2 = primitive.x2, primitive.y2
 
     -- Compute intersection
-    local t_ = root_bisection(0, 1, function(t) return y0*(1-t)^2 + 2*(1-t)*t*y1 + y2*t^2 end )
+    local t_ = root_bisection(0, 1, function(t) return y0*(1-t)^2 + 2*(1-t)*t*y1 + y2*t^2 - y end )
     local x_ = x0*(1-t_)^2 + 2*(1-t_)*t_*x1 + x2*t_^2
 
     if x < x_ then return primitive.dysign
