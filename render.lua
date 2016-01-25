@@ -90,6 +90,9 @@ function prepare_table.push_functions.linear_segment(x0, y0, x1, y1, holder, vir
     holder[n].dysign = dysign
     holder[n].xmin, holder[n].xmax = xmin, xmax
     holder[n].ymin, holder[n].ymax = ymin, ymax
+
+    print("P0: ", x0, y0, "P1: ", x1, y1)
+
 end
 
 function prepare_table.push_functions.degenerate_segment(x0, y0, dx0, dy0, dx1, dy1, holder)
@@ -130,6 +133,9 @@ function prepare_table.instructions.end_closed_contour(shape, offset, iadd)
     -- Fetch first vertice and then add closing edge
     local data = shape.data
     local x, y = data[offset], data[offset+1]
+
+    print("Offset: ", offset)
+    print("Fetched (x,y): ", data[offset], data[offset+1])
 
     local instr_offset = data[offset + 2]
     local closing_instruction = shape.offsets[iadd - instr_offset]
@@ -251,7 +257,7 @@ function prepare_table.path(element)
 
     -- Build primitives
     for i, v in ipairs(shape.instructions) do
-        --print(v)
+        print(v)
         local offset = shape.offsets[i]
         prepare_table.instructions[v](shape, offset, i)
     end
