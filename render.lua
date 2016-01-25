@@ -127,6 +127,7 @@ end
 function prepare_table.instructions.begin_closed_contour(shape, offset, iadd)
     local xf, data = shape.xf, shape.data
     data[offset+1], data[offset+2] = transform_point(data[offset+1], data[offset+2], xf)
+    print(data[offset+1], data[offset+2])
 end
 
 function prepare_table.instructions.end_closed_contour(shape, offset, iadd)
@@ -170,9 +171,15 @@ end
 function prepare_table.instructions.degenerate_segment(shape, offset, iadd)
     local primitives, data = shape.primitives, shape.data
 
+    local x0, y0 = data[offset], data[offset+1]
+    prepare_table.push_functions.linear_segment(x0, y0, x0, y0, shape.primitives, false)
+
+    --[[
     -- dx/dy are not valid after transformations! Is this too much of a problem?
     prepare_table.push_functions.degenerate_segment(data[offset], data[offset+1], data[offset+2], 
                                         data[offset+3], data[offset+4], data[offset+5], primitives)
+    ]]
+
 end
 
 function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
