@@ -57,17 +57,11 @@ local function horner_scheme(x, ...)
     local coef = {...}
     local n = #coef
 
-    for i, v in ipairs(coef) do print (i, v) end
-
     local out = coef[n]
     for i = n-1, 1, -1 do
-        out = x*out + coef[n]  
+        out = x*out + coef[n]
     end
-
     return out
-
-    -- t^2*y0-2*t^2*y1+t^2*y2-2*t*y0+2*t*y1-y+y0
-    -- 
 end
 
 -----------------------------------------------------------------------------------------
@@ -326,9 +320,9 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
 
-    -- Compute intersection (evaluate with Horner's scheme is faster)
-    t_ = root_bisection(0, 1, function(t) horner_scheme(t, y0-2*y1+y2, 2*(y1-y0), y0-y) end )
-    x_ = x0*(1-t_)^2 + 2*(1-t_)*t_*x1 + x2*t_^2
+    -- Compute intersection
+    local t_ = root_bisection(0, 1, function(t) return y0*(1-t)^2 + 2*(1-t)*t*y1 + y2*t^2 end )
+    local x_ = x0*(1-t_)^2 + 2*(1-t_)*t_*x1 + x2*t_^2
 
     if x < x_ then return primitive.dysign
     else return 0 end
