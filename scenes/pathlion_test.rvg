@@ -1,0 +1,12 @@
+local rvg = {}
+
+rvg.scene = scene{
+  fill(path{M,117,218,132,224,144,233,140,225,132,219,117,218,117,218},
+      solid(rgb8(0,0,0)))
+}:scale(1, -1):translate(0, 381)
+
+rvg.window = window(0,0,250,381)
+
+rvg.viewport = viewport(0,0,250,381)
+
+return rvg
