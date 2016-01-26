@@ -72,7 +72,7 @@ function prepare_table.push_functions.linear_segment(x0, y0, x1, y1, holder, vir
     holder[n] = {}
 
     holder[n].type = "linear_segment"
-    holder[n].virtal = virtual
+    holder[n].virtual = virtual
     holder[n].x0, holder[n].y0 = x0, y0
     holder[n].x1, holder[n].y1 = x1, y1
 
@@ -259,6 +259,21 @@ function prepare_table.path(element)
 end
 
 function prepare_table.polygon(element)
+    local shape, data = element.shape, element.shape.data
+    shape.primitives = {}
+
+    data[1], data[2] = transform_point(data[1], data[2], shape.xf)
+
+    -- We build primitives just as for linear_segments. We'll "trick" the
+    -- rasterization function for paths.
+    for i = 3, #shape.data, 2 do
+        data[i], data[i+1] = transform_point(data[i], data[i+1], shape.xf)
+
+        local x0, y0 = data[i-2], data[i-1]
+        local x1, y1 = data[i], data[i+1]
+
+        prepare_table.push_functions.linear_segment(x0, y0, x1, y1, shape.primitives, true)
+    end
 end
 
 -- prepare scene for sampling and return modified scene
@@ -377,7 +392,7 @@ function sample_table.path(element, x, y)
 end
 
 function sample_table.polygon(element, x, y)
-    return BGColor
+    return sample_table.path(element, x, y)
 end
 
 -- sample scene at x,y and return r,g,b,a
