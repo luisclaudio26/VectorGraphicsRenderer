@@ -402,6 +402,13 @@ local function preparescene(scene)
 
     for i, element in ipairs(scene.elements) do
         element.shape.xf = scene.xf * element.shape.xf
+
+        -- Set shape opacity in color's alpha channel (this should
+        -- change after once we start working with gradients)
+        if element.paint.opacity ~= 1 then
+            element.paint.data[4] = element.paint.opacity
+        end
+
         prepare_table[element.shape.type](element)
     end
 
