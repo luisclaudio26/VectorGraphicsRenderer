@@ -2,7 +2,7 @@ local driver = require"driver"
 local image = require"image"
 local chronos = require"chronos"
 
-local bezier = require("lua.bezier")
+local bezier, quadratic = require("lua.bezier"), require("lua.quadratic")
 local unpack, pack = table.unpack, table.pack
 local max, min, floor = math.max, math.min, math.floor
 
@@ -50,6 +50,21 @@ local function root_bisection(t0, t1, func)
     elseif y == 0 then 
         return tm
     end
+end
+
+local function compute_cubic_maxima(x0, x1, x2, x3)
+    local c = 3*(x1 - x0)
+    local b = 6*(x0 - 2*x1 + x2)
+    local a = 3*(-x0 + 3*x1 - 3*x2 + x3)
+
+    local n, t1, s1, t2, s2 = quadratic.quadratic(a,b,c)
+    local out1, out2 = 0, 0
+
+    if n > 0 then out1 = t1/s1 end
+    if n > 1 then out2 = t2/s2 end
+
+    out1, out2 = truncate_parameter( out1 ), truncate_parameter( out2 )
+    return out1, out2
 end
 
 -----------------------------------------------------------------------------------------
@@ -118,6 +133,23 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n].ymax, holder[n].ymin = maxy, miny
 end
 
+function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, holder)
+    local n = #holder + 1
+    holder[n] = {}
+    holder[n].type = "cubic_segment"
+    holder[n].x0, holder[n].y0 = u0, v0
+    holder[n].x1, holder[n].y1 = u1, v1
+    holder[n].x2, holder[n].y2 = u2, v2
+    holder[n].x3, holder[n].y3 = u3, v3
+    holder[n].dysign = sign(v3 - v0)
+
+    local xmax, xmin = max(u0, u3), min(u0, u3)
+    local ymax, ymin = max(v0, v3), min(v0, v3)
+
+    holder[n].xmax, holder[n].xmin = xmax, xmin
+    holder[n].ymax, holder[n].ymin = ymax, ymin
+end
+
 --------------------------------
 --------- Instructions ---------
 --------------------------------
@@ -172,7 +204,6 @@ function prepare_table.instructions.degenerate_segment(shape, offset, iadd)
 end
 
 function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
-
     local primitives, data = shape.primitives, shape.data
 
     data[offset+2], data[offset+3] = transform_point(data[offset+2], data[offset+3], shape.xf)
@@ -196,7 +227,33 @@ function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
             prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, primitives)
         end
     end
+end
 
+function prepare_table.instructions.cubic_segment(shape, offset, iadd)
+    local primitives, data = shape.primitives, shape.data
+
+    for i = 2, 6, 2 do
+        data[offset+i], data[offset+(i+1)] = transform_point(data[offset+i], data[offset+(i+1)], shape.xf)        
+    end
+
+    local x0, y0 = data[offset], data[offset+1]
+    local x1, y1 = data[offset+2], data[offset+3]
+    local x2, y2 = data[offset+4], data[offset+5]
+    local x3, y3 = data[offset+6], data[offset+7]
+
+    -- Calculate maxima
+    local t = {}
+    t[1], t[6] = 0, 1
+    t[2], t[3] = compute_cubic_maxima(x0, x1, x2, x3)
+    t[4], t[5] = compute_cubic_maxima(y0, y1, y2, y3)
+    table.sort( t )
+
+    for i = 2, 6 do
+        if t[i-1] ~= t[i] then
+            u0, v0, u1, v1, u2, v2, u3, v3 = bezier.cut3(t[i-1], t[i], x0, y0, x1, y1, x2, y2, x3, y3)
+            prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, primitives)
+        end
+    end
 end
 
 -----------------------------------------------------------------------------------------
@@ -334,6 +391,25 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     -- Compute intersection
     local t_ = root_bisection(0, 1, function(t) return y0*(1-t)^2 + 2*(1-t)*t*y1 + y2*t^2 - y end )
     local x_ = x0*(1-t_)^2 + 2*(1-t_)*t_*x1 + x2*t_^2
+
+    if x < x_ then return primitive.dysign
+    else return 0 end
+end
+
+function sample_table.sample_path.cubic_segment(primitive, x, y)
+
+    if y >= primitive.ymax or y < primitive.ymin then return 0 end
+    if x > primitive.xmax then return 0 end
+    if x <= primitive.xmin then return primitive.dysign end
+
+    local x0, y0 = primitive.x0, primitive.y0
+    local x1, y1 = primitive.x1, primitive.y1
+    local x2, y2 = primitive.x2, primitive.y2
+    local x3, y3 = primitive.x3, primitive.y3
+
+    -- Compute intersection
+    t_ = root_bisection(0, 1, function(t) return y0*(1-t)^3 + 3*(1-t)^2*t*y1 + 3*(1-t)*t^2*y2 + t^3*y3 - y end )
+    x_ = x0*(1-t_)^3 + 3*(1-t_)^2*t_*x1 + 3*(1-t_)*t_^2*x2 + t_^3*x3
 
     if x < x_ then return primitive.dysign
     else return 0 end
