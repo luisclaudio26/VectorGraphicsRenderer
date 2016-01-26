@@ -570,8 +570,8 @@ local function sample(scene, x, y)
         -- Superpose images
         if temp ~= BGColor then
 
-            -- TODO: Premultiply values in preprocessing
-            for j = 1, 3 do temp[j] = temp[j]*temp[4] end
+            -- TODO: Don't we need to premultiply this!?
+            --for j = 1, 3 do temp[j] = temp[j]*temp[4] end
 
             -- Alpha blend current color with new layer
             for j = 1, 4 do
@@ -584,8 +584,10 @@ local function sample(scene, x, y)
     end
 
     -- Compose with background
+    for j = 1, 4 do
+        out[j] = alpha_composite(out[j], BGColor[j], out[4])
+    end
 
-    -- Divisions in rendering time! No!
     return unpack(out)
 end
 
