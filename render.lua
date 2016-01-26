@@ -258,6 +258,9 @@ function prepare_table.path(element)
     end
 end
 
+function prepare_table.polygon(element)
+end
+
 -- prepare scene for sampling and return modified scene
 local function preparescene(scene)
 
@@ -320,7 +323,6 @@ end
 -----------------------------------------------------------------------------------------
 --------------------------------------- SAMPLE ------------------------------------------
 -----------------------------------------------------------------------------------------
-
 function sample_table.triangle(element, x, y)
     local implicit = element.shape.implicit
     local xmin, xmax = element.shape.xmin, element.shape.xmax
@@ -372,6 +374,10 @@ function sample_table.path(element, x, y)
 
     if paint_flag == true then return element.paint.data
     else return BGColor end
+end
+
+function sample_table.polygon(element, x, y)
+    return BGColor
 end
 
 -- sample scene at x,y and return r,g,b,a
