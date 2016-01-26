@@ -8,7 +8,7 @@ local max, min, floor = math.max, math.min, math.floor
 
 local _M = driver.new()
 
-local BGColor = require("lua.color").rgb8(1,1,1,1)
+local BGColor = require("lua.color").rgb(1,1,1,1)
 local epsilon, max_iteration = 0.000000000001, 50
 
 -----------------------------------------------------------------------------------------
@@ -561,29 +561,23 @@ end
 
 -- sample scene at x,y and return r,g,b,a
 local function sample(scene, x, y)
-    local out_r, out_g, out_b, out_a = 0,0,0,0
+    local out = BGColor
 
-    for i = #scene.elements, 1, -1 do
+    for i = 1, #scene.elements do
         local element = scene.elements[i]
         local temp = sample_table[element.shape.type](element, x, y)
 
-        -- Superpose images
-        local r, g, b, a = unpack(temp)
-
+        -- Superpose images (TODO: Premultiply values in preprocessing)
         if temp ~= BGColor then
-            if a == 1 then 
-                return r, g, b, a 
-            else
-                -- Alpha-composite and premultiply values
-                out_r, out_g = alpha_composite(r, out_r, a), alpha_composite(g, out_g, a)
-                out_b, out_a = alpha_composite(b, out_b, a), alpha_composite(a, out_a, a)
-                out_r, out_g, out_b = out_r * out_a, out_g * out_a, out_b * out_a                
-            end
+            
+
         end
     end
 
+    -- Compose with background
+
     -- Divisions in rendering time! No!
-    return out_r/out_a, out_g/out_a, out_b/out_a, out_a
+    return unpack(out)
 end
 
 -----------------------------------------------------------------------------------------
