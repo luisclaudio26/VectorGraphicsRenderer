@@ -82,6 +82,10 @@ local function compute_rational_maxima(x0, x1, x2, w)
     return out1, out2
 end
 
+local function alpha_composite(c1, c2, a)
+    return c1 + (1-a)*c2
+end
+
 -----------------------------------------------------------------------------------------
 -------------------------------- PATH PREPROCESSING -------------------------------------
 -----------------------------------------------------------------------------------------
@@ -480,7 +484,7 @@ function sample_table.sample_path.rational_segment(primitive, x, y)
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
     local w = primitive.w
-    
+
     -- Compute intersection
     local func = function(t)
         local bx, by, bw = bezier.at2rc(t, x0, y0, x1, y1, w, x2, y2)
@@ -557,16 +561,29 @@ end
 
 -- sample scene at x,y and return r,g,b,a
 local function sample(scene, x, y)
-    
+    local out_r, out_g, out_b, out_a = 0,0,0,0
+
     for i = #scene.elements, 1, -1 do
         local element = scene.elements[i]
         local temp = sample_table[element.shape.type](element, x, y)
 
         -- Superpose images
-        if temp ~= BGColor then return unpack(temp) end
+        local r, g, b, a = unpack(temp)
+
+        if temp ~= BGColor then
+            if a == 1 then 
+                return r, g, b, a 
+            else
+                -- Alpha-composite and premultiply values
+                out_r, out_g = alpha_composite(r, out_r, a), alpha_composite(g, out_g, a)
+                out_b, out_a = alpha_composite(b, out_b, a), alpha_composite(a, out_a, a)
+                out_r, out_g, out_b = out_r * out_a, out_g * out_a, out_b * out_a                
+            end
+        end
     end
 
-    return unpack(BGColor)
+    -- Divisions in rendering time! No!
+    return out_r/out_a, out_g/out_a, out_b/out_a, out_a
 end
 
 -----------------------------------------------------------------------------------------
