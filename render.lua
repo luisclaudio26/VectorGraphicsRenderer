@@ -274,6 +274,10 @@ function prepare_table.polygon(element)
 
         prepare_table.push_functions.linear_segment(x0, y0, x1, y1, shape.primitives, true)
     end
+
+    -- Push closing edge
+    prepare_table.push_functions.linear_segment(data[#data-1], data[#data], 
+                                            data[1], data[2], shape.primitives, true)
 end
 
 -- prepare scene for sampling and return modified scene
