@@ -561,16 +561,25 @@ end
 
 -- sample scene at x,y and return r,g,b,a
 local function sample(scene, x, y)
-    local out = BGColor
+    local out = {0,0,0,0}
 
-    for i = 1, #scene.elements do
+    for i = #scene.elements, 1, -1 do
         local element = scene.elements[i]
         local temp = sample_table[element.shape.type](element, x, y)
 
-        -- Superpose images (TODO: Premultiply values in preprocessing)
+        -- Superpose images
         if temp ~= BGColor then
-            
 
+            -- TODO: Premultiply values in preprocessing
+            for j = 1, 3 do temp[j] = temp[j]*temp[4] end
+
+            -- Alpha blend current color with new layer
+            for j = 1, 4 do
+                out[j] = alpha_composite(out[j], temp[j], out[4])
+            end
+
+            -- Premultiply values in OUT
+            for j = 1, 3 do out[j] = out[j]*out[4] end
         end
     end
 
