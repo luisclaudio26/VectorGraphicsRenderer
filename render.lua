@@ -86,6 +86,28 @@ local function alpha_composite(c1, c2, a)
     return c1 + (1-a)*c2
 end
 
+local function search_in_ramp(ramp, value)
+    -- Just a linear search. Other versions may sample
+    -- the ramp and just do a look-up table for this
+    local off = 0
+    for i = 1, #ramp, 2 do
+        if ramp[i] > value then
+            off = (i-2)
+            break
+        end
+    end
+
+    return off
+end
+
+local function interpolate_colors(color1, color2, t)
+    local out = {}
+    for i = 1, 4 do
+        out[i] = (1-t)*color1[i] + t*color2[i]
+    end
+    return out
+end
+
 -----------------------------------------------------------------------------------------
 -------------------------------- PATH PREPROCESSING -------------------------------------
 -----------------------------------------------------------------------------------------
@@ -527,6 +549,16 @@ end
 ------------------------------- PAINT SAMPLING ------------------------------------------
 -----------------------------------------------------------------------------------------
 sample_table.sample_paint = {}
+sample_table.sample_paint.spread_table = {}
+
+function sample_table.sample_paint.spread_table.pad(v)
+    if v > 1 then return 1
+    elseif v < 0 then return 0
+    else return v end
+end
+
+---------------
+---------------
 
 function sample_table.sample_paint.solid(paint, x, y)
     return paint.data
@@ -534,31 +566,18 @@ end
 
 function sample_table.sample_paint.lineargradient(paint, x, y)
 
-    local data = paint.data
+    local data, ramp = paint.data, paint.data.ramp
     x_, y_ = transform_point(x, y, data.inversexf)
 
     -- Dot product p . (p2 - p1) / ||p2-p1||
     local k = x_ * data.unit[1] + y_ * data.unit[2]
-
     local v = k / data.grad_length
+    
+    v = sample_table.sample_paint.spread_table[ramp.spread](v)
 
-    -- Search color in ramp
-    local ramp, off = data.ramp, 0
-    for i = 1, #ramp, 2 do
-        if ramp[i] > v then
-            off = i
-            break
-        end
-    end
+    off = search_in_ramp(ramp, v)
 
-    -- Interpolate color
-    local d = v - ramp[off-2] -- distance to first offset to the left
-    local out = {}
-    for i = 1, 4 do
-        out[i] = (1-d)*ramp[off-1][i] + d*ramp[off+1][i]
-    end
-
-    return out
+    return interpolate_colors(ramp[off+1], ramp[off+3], v - ramp[off])
 end
 
 -----------------------------------------------------------------------------------------
