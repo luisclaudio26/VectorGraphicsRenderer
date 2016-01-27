@@ -412,10 +412,11 @@ function prepare_table.prepare_paint.lineargradient(paint)
     local data = paint.data
     local p1, p2 = data.p1, data.p2
 
-    -- Precompute dist(p1, p2)
-    data.grad_dist =  math.sqrt( (p1[1] - p2[1])^2 + (p1[2] - p2[2])^2 )
+    data.grad_length =  math.sqrt( (p1[1] - p2[1])^2 + (p1[2] - p2[2])^2 )
+    data.unit = {}
+    data.unit[1] = (p2[1] - p1[1]) / data.grad_length
+    data.unit[2] = (p2[2] - p1[2]) / data.grad_length
 
-    -- Precompute inverse transformation
     data.inversexf = paint.xf : inverse()
 end
 
@@ -532,7 +533,32 @@ function sample_table.sample_paint.solid(paint, x, y)
 end
 
 function sample_table.sample_paint.lineargradient(paint, x, y)
-    return {1,0,0,1}
+
+    local data = paint.data
+    x_, y_ = transform_point(x, y, data.inversexf)
+
+    -- Dot product p . (p2 - p1) / ||p2-p1||
+    local k = x_ * data.unit[1] + y_ * data.unit[2]
+
+    local v = k / data.grad_length
+
+    -- Search color in ramp
+    local ramp, off = data.ramp, 0
+    for i = 1, #ramp, 2 do
+        if ramp[i] > v then
+            off = i
+            break
+        end
+    end
+
+    -- Interpolate color
+    local d = v - ramp[off-2] -- distance to first offset to the left
+    local out = {}
+    for i = 1, 4 do
+        out[i] = (1-d)*ramp[off-1][i] + d*ramp[off+1][i]
+    end
+
+    return out
 end
 
 -----------------------------------------------------------------------------------------
