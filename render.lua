@@ -407,13 +407,24 @@ function prepare_table.prepare_paint.solid(paint)
     paint.data[4] = paint.data[4] * paint.opacity
 end
 
+-- This is still the naive way to do!
+function prepare_table.prepare_paint.lineargradient(paint)
+    local data = paint.data
+    local p1, p2 = data.p1, data.p2
+
+    -- Precompute dist(p1, p2)
+    data.grad_dist =  math.sqrt( (p1[1] - p2[1])^2 + (p1[2] - p2[2])^2 )
+
+    -- Precompute inverse transformation
+    data.inversexf = paint.xf : inverse()
+end
+
 -- prepare scene for sampling and return modified scene
 local function preparescene(scene)
 
     for i, element in ipairs(scene.elements) do
         element.shape.xf = scene.xf * element.shape.xf
         prepare_table.prepare_paint[element.paint.type](element.paint)
-
         prepare_table[element.shape.type](element)
     end
 
@@ -512,7 +523,20 @@ function sample_table.sample_path.rational_segment(primitive, x, y)
 end
 
 -----------------------------------------------------------------------------------------
---------------------------------------- SAMPLE ------------------------------------------
+------------------------------- PAINT SAMPLING ------------------------------------------
+-----------------------------------------------------------------------------------------
+sample_table.sample_paint = {}
+
+function sample_table.sample_paint.solid(paint, x, y)
+    return paint.data
+end
+
+function sample_table.sample_paint.lineargradient(paint, x, y)
+    return {1,0,0,1}
+end
+
+-----------------------------------------------------------------------------------------
+---------------------------- GEOMETRY SAMPLING ------------------------------------------
 -----------------------------------------------------------------------------------------
 function sample_table.triangle(element, x, y)
     local implicit = element.shape.implicit
@@ -549,7 +573,7 @@ function sample_table.circle(element, x, y)
 end
 
 function sample_table.path(element, x, y)
-    local shape, primitives = element.shape, element.shape.primitives
+    local paint, shape, primitives = element.paint, element.shape, element.shape.primitives
 
     local count = 0
     for i,prim in ipairs(primitives) do
@@ -563,7 +587,8 @@ function sample_table.path(element, x, y)
         paint_flag = (count % 2 ~= 0)
     end
 
-    if paint_flag == true then return element.paint.data
+    if paint_flag == true then 
+        return sample_table.sample_paint[paint.type](paint, x, y)
     else return BGColor end
 end
 
