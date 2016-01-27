@@ -317,7 +317,7 @@ function prepare_table.instructions.rational_quadratic_segment(shape, start, iad
 end
 
 -----------------------------------------------------------------------------------------
--------------------------------- PREPROCESSING ------------------------------------------
+-------------------------------- GEOMETRY PREPROCESSING ---------------------------------
 -----------------------------------------------------------------------------------------
 function prepare_table.triangle(element)
     -- We can a transformation that maps to a canonical 
@@ -397,17 +397,22 @@ function prepare_table.polygon(element)
                                             data[1], data[2], shape.primitives, true)
 end
 
+-----------------------------------------------------------------------------------------
+-------------------------------- PAINT PREPROCESSING ------------------------------------
+-----------------------------------------------------------------------------------------
+prepare_table.prepare_paint = {}
+
+function prepare_table.prepare_paint.solid(paint)
+    -- Just multiply color alpha channel by layer opacity
+    paint.data[4] = paint.data[4] * paint.opacity
+end
+
 -- prepare scene for sampling and return modified scene
 local function preparescene(scene)
 
     for i, element in ipairs(scene.elements) do
         element.shape.xf = scene.xf * element.shape.xf
-
-        -- Set shape opacity in color's alpha channel (this should
-        -- change after once we start working with gradients)
-        if element.paint.opacity ~= 1 then
-            element.paint.data[4] = element.paint.opacity
-        end
+        prepare_table.prepare_paint[element.paint.type](element.paint)
 
         prepare_table[element.shape.type](element)
     end
@@ -576,9 +581,6 @@ local function sample(scene, x, y)
 
         -- Superpose images
         if temp ~= BGColor then
-
-            -- TODO: Don't we need to premultiply this!?
-            --for j = 1, 3 do temp[j] = temp[j]*temp[4] end
 
             -- Alpha blend current color with new layer
             for j = 1, 4 do
