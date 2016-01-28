@@ -440,6 +440,21 @@ function prepare_table.prepare_paint.lineargradient(paint)
     data.unit[2] = (p2[2] - p1[2]) / data.grad_length
 
     data.inversexf = paint.xf : inverse()
+
+    -- If 0.0 and 1.0 are not defined in the ramp, define it
+    local ramp = data.ramp    
+    
+
+    if ramp[1] ~= 0 then
+        table.insert(ramp, 1, ramp[2]) -- Insert color
+        table.insert(ramp, 1, 0) -- Insert offset
+    end
+
+    if ramp[#ramp-1] ~= 1 then
+        local v = ramp[#ramp]
+        table.insert(ramp, 1) -- Insert offset
+        table.insert(ramp, v) -- Insert value
+    end
 end
 
 -- prepare scene for sampling and return modified scene
@@ -551,12 +566,6 @@ end
 sample_table.sample_paint = {}
 sample_table.sample_paint.spread_table = {}
 
-function sample_table.sample_paint.spread_table.pad(v)
-    if v > 1 then return 1
-    elseif v < 0 then return 0
-    else return v end
-end
-
 sample_table.sample_paint.spread_table = {
     ["repeat"] = function(v)
         if v > 1 then return v - floor(v) 
@@ -575,6 +584,12 @@ function sample_table.sample_paint.spread_table.reflect(v)
         if int % 2 == 0 then return -(v - int)
         else return 1-(v - int) end
     end
+end
+
+function sample_table.sample_paint.spread_table.pad(v)
+    if v > 1 then return 1
+    elseif v < 0 then return 0
+    else return v end
 end
 
 ---------------
