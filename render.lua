@@ -457,8 +457,12 @@ function prepare_table.prepare_paint.lineargradient(paint)
 end
 
 function prepare_table.prepare_paint.radialgradient(paint)
+    local data = paint.data
+    local ramp, c, f, r = data.ramp, data.center, data.focus, data.radius
 
-
+    -- Translate focus to the origin
+    local xf = paint.xf
+    xf : translate(-f[1], -f[2])
 end
 
 -- prepare scene for sampling and return modified scene
