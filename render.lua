@@ -623,7 +623,7 @@ function sample_table.sample_paint.lineargradient(paint, x, y)
 end
 
 function sample_table.sample_paint.radialgradient(paint, x, y)
-    return {0,0,0,0}
+    return {1,0,0,1}
 end
 
 -----------------------------------------------------------------------------------------
@@ -652,14 +652,15 @@ function sample_table.triangle(element, x, y)
 end
 
 function sample_table.circle(element, x, y)
-    local shape = element.shape
+    local shape, paint = element.shape, element.paint
     local cx, cy, r = shape.cx, shape.cy, shape.r
 
     -- Map point to untransformed circle
     tx, ty = transform_point(x, y, shape.inversexf)
     local d = math.sqrt( (cx-tx)^2 + (cy-ty)^2 )
 
-    if d <= r then return element.paint.data
+    if d <= r then 
+        return sample_table.sample_paint[paint.type](paint, x, y)
     else return BGColor end
 end
 
@@ -678,7 +679,7 @@ function sample_table.path(element, x, y)
         paint_flag = (count % 2 ~= 0)
     end
 
-    if paint_flag == true then 
+    if paint_flag == true then
         return sample_table.sample_paint[paint.type](paint, x, y)
     else return BGColor end
 end
