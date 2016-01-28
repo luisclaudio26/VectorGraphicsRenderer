@@ -4,7 +4,7 @@ local chronos = require"chronos"
 
 local bezier, quadratic = require("lua.bezier"), require("lua.quadratic")
 local unpack, pack = table.unpack, table.pack
-local max, min, floor = math.max, math.min, math.floor
+local max, min, floor, abs = math.max, math.min, math.floor, math.abs
 
 local _M = driver.new()
 
@@ -89,15 +89,13 @@ end
 local function search_in_ramp(ramp, value)
     -- Just a linear search. Other versions may sample
     -- the ramp and just do a look-up table for this
-    local off = 0
-    for i = 1, #ramp, 2 do
-        if ramp[i] >= value then
-            off = (i-2)
-            break
+    for i = 1, #ramp-2, 2 do
+        if ramp[i] <= value and value < ramp[i+2] then
+            return i
         end
     end
 
-    return off
+    return (#ramp-3)
 end
 
 local function interpolate_colors(color1, color2, t)
@@ -557,6 +555,14 @@ function sample_table.sample_paint.spread_table.pad(v)
     else return v end
 end
 
+sample_table.sample_paint.spread_table = {
+    ["repeat"] = function(v)
+        if v > 1 then return v - floor(v) 
+        elseif v < 0 then return 1 - (v - floor(v))
+        else return v end
+    end
+}
+
 ---------------
 ---------------
 
@@ -567,17 +573,17 @@ end
 function sample_table.sample_paint.lineargradient(paint, x, y)
 
     local data, ramp = paint.data, paint.data.ramp
+    local x0, y0 = data.p1[1], data.p1[2]
     x_, y_ = transform_point(x, y, data.inversexf)
 
-    -- Dot product p . (p2 - p1) / ||p2-p1||
-    local k = x_ * data.unit[1] + y_ * data.unit[2]
-    local v = k / data.grad_length
-    
-    v = sample_table.sample_paint.spread_table[ramp.spread](v)
+    -- Dot product (p-p1) . (p2 - p1) / ||p2-p1||
+    local k = (x_ - x0) * data.unit[1] + (y_ - y0) * data.unit[2]
+    local k = k / data.grad_length
+    local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
 
-    off = search_in_ramp(ramp, v)
+    off = search_in_ramp(ramp, wrapped)
 
-    return interpolate_colors(ramp[off+1], ramp[off+3], v - ramp[off])
+    return interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off])
 end
 
 -----------------------------------------------------------------------------------------
