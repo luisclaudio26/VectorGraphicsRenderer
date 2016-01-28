@@ -442,8 +442,7 @@ function prepare_table.prepare_paint.lineargradient(paint)
     data.inversexf = paint.xf : inverse()
 
     -- If 0.0 and 1.0 are not defined in the ramp, define it
-    local ramp = data.ramp    
-    
+    local ramp = data.ramp
 
     if ramp[1] ~= 0 then
         table.insert(ramp, 1, ramp[2]) -- Insert color
@@ -455,6 +454,11 @@ function prepare_table.prepare_paint.lineargradient(paint)
         table.insert(ramp, 1) -- Insert offset
         table.insert(ramp, v) -- Insert value
     end
+end
+
+function prepare_table.prepare_paint.radialgradient(paint)
+
+
 end
 
 -- prepare scene for sampling and return modified scene
@@ -608,11 +612,18 @@ function sample_table.sample_paint.lineargradient(paint, x, y)
     -- Dot product (p-p1) . (p2 - p1) / ||p2-p1||
     local k = (x_ - x0) * data.unit[1] + (y_ - y0) * data.unit[2]
     local k = k / data.grad_length
+
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
+    local off = search_in_ramp(ramp, wrapped)
+    local out = interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off])
 
-    off = search_in_ramp(ramp, wrapped)
+    out[4] = out[4] * paint.opacity
 
-    return interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off])
+    return out
+end
+
+function sample_table.sample_paint.radialgradient(paint, x, y)
+    return {0,0,0,0}
 end
 
 -----------------------------------------------------------------------------------------
