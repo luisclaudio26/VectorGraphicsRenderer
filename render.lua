@@ -91,8 +91,7 @@ local function search_in_ramp(ramp, value)
     -- the ramp and just do a look-up table for this
     local off = 0
     for i = 1, #ramp, 2 do
-        --print(i)
-        if ramp[i] > value then
+        if ramp[i] >= value then
             off = (i-2)
             break
         end
