@@ -4,7 +4,9 @@ local chronos = require"chronos"
 
 local bezier, quadratic = require("lua.bezier"), require("lua.quadratic")
 local unpack, pack = table.unpack, table.pack
-local max, min, floor, abs = math.max, math.min, math.floor, math.abs
+local max, min = math.max, math.min 
+local floor, ceil = math.floor, math.ceil
+local abs = math.abs
 
 local _M = driver.new()
 
@@ -558,10 +560,22 @@ end
 sample_table.sample_paint.spread_table = {
     ["repeat"] = function(v)
         if v > 1 then return v - floor(v) 
-        elseif v < 0 then return 1 - (v - floor(v))
+        elseif v < 0 then return 1 + (v - ceil(v))
         else return v end
     end
 }
+
+function sample_table.sample_paint.spread_table.reflect(v)
+    if v >= 0 then
+        local int = floor(v)
+        if int % 2 == 0 then return v - int
+        else return 1 - (v - int) end
+    else
+        local int = ceil(v)
+        if int % 2 == 0 then return -(v - int)
+        else return 1-(v - int) end
+    end
+end
 
 ---------------
 ---------------
