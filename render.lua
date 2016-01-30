@@ -457,12 +457,26 @@ function prepare_table.prepare_paint.lineargradient(paint)
 end
 
 function prepare_table.prepare_paint.radialgradient(paint)
-    local data = paint.data
+    local data, xf = paint.data, paint.xf
     local ramp, c, f, r = data.ramp, data.center, data.focus, data.radius
 
     -- Translate focus to the origin
-    local xf = paint.xf
-    xf : translate(-f[1], -f[2])
+    xf = xf : translate(-f[1], -f[2])
+
+    -- Compute angle between transformed center and x axis 
+    --( <1,0> ), then rotate clockwise
+    cx_, cy_ = transform_point(c[1], c[2], xf)
+    local theta = cx_ / math.sqrt(cx_^2 + cy_^2)
+    theta = math.deg( math.acos(theta) )
+    xf = xf : rotate( - theta )
+
+    -- Store transform and its inverse. We'll transform the point using the
+    -- "direct" one, and we'll use the inverse to compose with other transformations
+    data.scene_to_grad = xf
+    data.grad_to_scene = xf : inverse()
+
+    c[1], c[2] = transform_point( c[1], c[2], xf )
+    f[1], f[2] = transform_point( f[1], f[2], xf )
 end
 
 -- prepare scene for sampling and return modified scene
