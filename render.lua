@@ -642,23 +642,26 @@ end
 
 function sample_table.sample_paint.radialgradient(paint, x, y)
     local data = paint.data
-    local ramp, c, f, r = data.ramp, data.center, data.focus, data.radius
+    local ramp, center, f, r = data.ramp, data.center, data.focus, data.radius
+
+    -- Transform (x,y)
+    x, y = transform_point(x, y, data.scene_to_grad)
 
     -- Compute intersection of the line passing through origin
     -- and (x,y) with the circle
     local a = -x^2 - y^2
-    local b = 2*(x*c[1] + y*c[2])
-    local c = r^2 - c[1]^2 - c[2]^2
+    local b = 2*(x*center[1] + y*center[2])
+    local c = r^2 - center[1]^2 - center[2]^2
     local n, r1, s1, r2, s2 = quadratic.quadratic(a, b, c)
 
     -- We're interest in the positive root for t (the one which goes
     -- towards the point (x,y) )
     local t1, t2 = 0, 0
     if n > 0 then t1 = r1/s1 end
-    if n > 1 then t2 = r2/r2 end
+    if n > 1 then t2 = r2/s2 end
     local t_ = max(t1, t2)
 
-    -- Ratio of lenghts of vectors seems to be 1/t ... ?
+    -- Ratio of lenghts of vectors is 1/t
     local k = 1 / t_
 
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
@@ -703,7 +706,7 @@ function sample_table.circle(element, x, y)
     tx, ty = transform_point(x, y, shape.inversexf)
     local d = math.sqrt( (cx-tx)^2 + (cy-ty)^2 )
 
-    if d <= r then 
+    if d <= r then
         return sample_table.sample_paint[paint.type](paint, x, y)
     else return BGColor end
 end
