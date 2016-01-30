@@ -108,6 +108,20 @@ local function interpolate_colors(color1, color2, t)
     return out
 end
 
+local function fix_ramp(ramp)
+    -- If 0.0 and 1.0 are not defined in the ramp, define it
+    if ramp[1] ~= 0 then
+        table.insert(ramp, 1, ramp[2]) -- Insert color
+        table.insert(ramp, 1, 0) -- Insert offset
+    end
+
+    if ramp[#ramp-1] ~= 1 then
+        local v = ramp[#ramp]
+        table.insert(ramp, 1) -- Insert offset
+        table.insert(ramp, v) -- Insert value
+    end
+end
+
 -----------------------------------------------------------------------------------------
 -------------------------------- PATH PREPROCESSING -------------------------------------
 -----------------------------------------------------------------------------------------
@@ -434,6 +448,8 @@ function prepare_table.prepare_paint.lineargradient(paint, shapexf)
     local data = paint.data
     local p1, p2 = data.p1, data.p2
 
+    fix_ramp( data.ramp )
+
     -- Precompute values
     data.grad_length =  math.sqrt( (p1[1] - p2[1])^2 + (p1[2] - p2[2])^2 )
     data.unit = {}
@@ -442,25 +458,13 @@ function prepare_table.prepare_paint.lineargradient(paint, shapexf)
 
     -- "Undo" shape transformation and precompute inverse
     data.inversexf = paint.xf : inverse()
-
-    -- If 0.0 and 1.0 are not defined in the ramp, define it
-    local ramp = data.ramp
-
-    if ramp[1] ~= 0 then
-        table.insert(ramp, 1, ramp[2]) -- Insert color
-        table.insert(ramp, 1, 0) -- Insert offset
-    end
-
-    if ramp[#ramp-1] ~= 1 then
-        local v = ramp[#ramp]
-        table.insert(ramp, 1) -- Insert offset
-        table.insert(ramp, v) -- Insert value
-    end
 end
 
 function prepare_table.prepare_paint.radialgradient(paint, shapexf)
     local data, xf = paint.data, paint.xf
     local ramp, c, f, r = data.ramp, data.center, data.focus, data.radius
+
+    fix_ramp( data.ramp )
 
     -- "undo" shape transformation
     xf = shapexf : inverse()
