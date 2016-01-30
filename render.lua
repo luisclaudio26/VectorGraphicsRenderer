@@ -424,21 +424,23 @@ end
 -----------------------------------------------------------------------------------------
 prepare_table.prepare_paint = {}
 
-function prepare_table.prepare_paint.solid(paint)
+function prepare_table.prepare_paint.solid(paint, shapexf)
     -- Just multiply color alpha channel by layer opacity
     paint.data[4] = paint.data[4] * paint.opacity
 end
 
 -- This is still the naive way to do!
-function prepare_table.prepare_paint.lineargradient(paint)
+function prepare_table.prepare_paint.lineargradient(paint, shapexf)
     local data = paint.data
     local p1, p2 = data.p1, data.p2
 
+    -- Precompute values
     data.grad_length =  math.sqrt( (p1[1] - p2[1])^2 + (p1[2] - p2[2])^2 )
     data.unit = {}
     data.unit[1] = (p2[1] - p1[1]) / data.grad_length
     data.unit[2] = (p2[2] - p1[2]) / data.grad_length
 
+    -- "Undo" shape transformation and precompute inverse
     data.inversexf = paint.xf : inverse()
 
     -- If 0.0 and 1.0 are not defined in the ramp, define it
@@ -456,9 +458,12 @@ function prepare_table.prepare_paint.lineargradient(paint)
     end
 end
 
-function prepare_table.prepare_paint.radialgradient(paint)
+function prepare_table.prepare_paint.radialgradient(paint, shapexf)
     local data, xf = paint.data, paint.xf
     local ramp, c, f, r = data.ramp, data.center, data.focus, data.radius
+
+    -- "undo" shape transformation
+    xf = shapexf : inverse()
 
     -- Translate focus to the origin
     xf = xf : translate(-f[1], -f[2])
@@ -484,7 +489,7 @@ local function preparescene(scene)
 
     for i, element in ipairs(scene.elements) do
         element.shape.xf = scene.xf * element.shape.xf
-        prepare_table.prepare_paint[element.paint.type](element.paint)
+        prepare_table.prepare_paint[element.paint.type](element.paint, element.shape.xf)
         prepare_table[element.shape.type](element)
     end
 
