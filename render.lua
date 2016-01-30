@@ -438,13 +438,13 @@ end
 -----------------------------------------------------------------------------------------
 prepare_table.prepare_paint = {}
 
-function prepare_table.prepare_paint.solid(paint, shapexf)
+function prepare_table.prepare_paint.solid(paint, shapexf, scenexf)
     -- Just multiply color alpha channel by layer opacity
     paint.data[4] = paint.data[4] * paint.opacity
 end
 
 -- This is still the naive way to do!
-function prepare_table.prepare_paint.lineargradient(paint, shapexf)
+function prepare_table.prepare_paint.lineargradient(paint, shapexf, scenexf)
     local data = paint.data
     local p1, p2 = data.p1, data.p2
 
@@ -460,32 +460,29 @@ function prepare_table.prepare_paint.lineargradient(paint, shapexf)
     data.inversexf = paint.xf : inverse()
 end
 
-function prepare_table.prepare_paint.radialgradient(paint, shapexf)
-    local data, xf = paint.data, paint.xf
+function prepare_table.prepare_paint.radialgradient(paint, shapexf, scenexf)
+    local data, to_grad = paint.data, paint.xf
     local ramp, c, f, r = data.ramp, data.center, data.focus, data.radius
+    local xform = require("xform")
 
     fix_ramp( data.ramp )
 
-    -- "undo" shape transformation
-    xf = shapexf : inverse()
-
     -- Translate focus to the origin
-    xf = xf : translate(-f[1], -f[2])
+    local canonize = xform.translate(-f[1], -f[2])
 
     -- Compute angle between transformed center and x axis 
     --( <1,0> ), then rotate clockwise
-    cx_, cy_ = transform_point(c[1], c[2], xf)
+    cx_, cy_ = transform_point(c[1], c[2], canonize)
     local theta = cx_ / math.sqrt(cx_^2 + cy_^2)
     theta = math.deg( math.acos(theta) )
-    xf = xf : rotate( - theta )
+    canonize = canonize : rotate( - theta )
+
+    c[1], c[2] = transform_point( c[1], c[2], canonize )
+    f[1], f[2] = transform_point( f[1], f[2], canonize )
 
     -- Store transform and its inverse. We'll transform the point using the
     -- "direct" one, and we'll use the inverse to compose with other transformations
-    data.scene_to_grad = xf
-    -- data.grad_to_scene = xf : inverse()
-
-    c[1], c[2] = transform_point( c[1], c[2], xf )
-    f[1], f[2] = transform_point( f[1], f[2], xf )
+    data.scene_to_grad = canonize * to_grad : inverse() * scenexf : inverse()
 end
 
 -- prepare scene for sampling and return modified scene
@@ -493,8 +490,8 @@ local function preparescene(scene)
 
     for i, element in ipairs(scene.elements) do
         element.shape.xf = scene.xf * element.shape.xf
-        prepare_table.prepare_paint[element.paint.type](element.paint, element.shape.xf)
         prepare_table[element.shape.type](element)
+        prepare_table.prepare_paint[element.paint.type](element.paint, element.shape.xf, scene.xf)
     end
 
     return scene
