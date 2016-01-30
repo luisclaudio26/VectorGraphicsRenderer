@@ -641,7 +641,33 @@ function sample_table.sample_paint.lineargradient(paint, x, y)
 end
 
 function sample_table.sample_paint.radialgradient(paint, x, y)
-    return {1,0,0,1}
+    local data = paint.data
+    local ramp, c, f, r = data.ramp, data.center, data.focus, data.radius
+
+    -- Compute intersection of the line passing through origin
+    -- and (x,y) with the circle
+    local a = -x^2 - y^2
+    local b = 2*(x*c[1] + y*c[2])
+    local c = r^2 - c[1]^2 - c[2]^2
+    local n, r1, s1, r2, s2 = quadratic.quadratic(a, b, c)
+
+    -- We're interest in the positive root for t (the one which goes
+    -- towards the point (x,y) )
+    local t1, t2 = 0, 0
+    if n > 0 then t1 = r1/s1 end
+    if n > 1 then t2 = r2/r2 end
+    local t_ = max(t1, t2)
+
+    -- Ratio of lenghts of vectors seems to be 1/t ... ?
+    local k = 1 / t_
+
+    local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
+    local off = search_in_ramp(ramp, wrapped)
+    local out = interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off])
+
+    out[4] = out[4] * paint.opacity
+
+    return out
 end
 
 -----------------------------------------------------------------------------------------
