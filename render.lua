@@ -482,7 +482,7 @@ function prepare_table.prepare_paint.radialgradient(paint, shapexf)
     -- Store transform and its inverse. We'll transform the point using the
     -- "direct" one, and we'll use the inverse to compose with other transformations
     data.scene_to_grad = xf
-    data.grad_to_scene = xf : inverse()
+    -- data.grad_to_scene = xf : inverse()
 
     c[1], c[2] = transform_point( c[1], c[2], xf )
     f[1], f[2] = transform_point( f[1], f[2], xf )
