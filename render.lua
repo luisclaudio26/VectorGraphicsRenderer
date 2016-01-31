@@ -483,16 +483,13 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
         canonize = canonize : rotate( - theta )
     end
 
-    -- TEST WITHOUT CANONIZATION
-    canonize = xform.identity()
-
     -- Canonize focus and origin
     c[1], c[2] = transform_point( c[1], c[2], canonize )
     f[1], f[2] = transform_point( f[1], f[2], canonize )
 
     -- Store transform and its inverse. We'll transform the point using the
     -- "direct" one, and we'll use the inverse to compose with other transformations
-    data.scene_to_grad = canonize * (to_grad : inverse() * scenexf : inverse())
+    data.scene_to_grad = canonize * (to_grad : inverse()) * (scenexf : inverse())
 end
 
 -- prepare scene for sampling and return modified scene
@@ -663,7 +660,6 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     -- Transform (x,y)
     x, y = transform_point(x, y, data.scene_to_grad)
 
-    --[[
     -- Compute intersection of the line passing through origin
     -- and (x,y) with the circle
     local a = -(x^2 + y^2)
@@ -679,26 +675,7 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local t_ = max(t1, t2)
 
     -- Ratio of lenghts of vectors is 1/t
-    local k = 1 / t_ ]]
-
-    -- WITHOUT CANONIZATION
-    local a = (x-f[1])^2+(y-f[2])^2
-    local b = (-2*center[1]*(x-f[1])+2*f[1]*(x-f[1])-2*center[2]*(y-f[2])+2*f[2]*(y-f[2]))
-    local c = f[1]^2-2*f[1]*center[1]+f[2]^2-2*f[2]*center[2]+center[1]^2+center[2]^2-r^2
-    local n, r1, s1, r2, s2 = quadratic.quadratic(a, b, c)
-
-    -- We're interest in the positive root for t (the one which goes
-    -- towards the point (x,y) )
-    local t1, t2 = 0, 0
-    if n > 0 then t1 = r1/s1 end
-    if n > 1 then t2 = r2/s2 end
-    local t_ = max(t1, t2)
-
-    local length1 = math.sqrt( (x-f[1])^2 + (y-f[2])^2 )
-    local length2 = math.sqrt( ( t_*(x-f[1]) )^2 + ( t_*(y-f[2]) )^2 )
-    local k = length1 / length2
-
-    print(length1, length2, k)
+    local k = 1 / t_
 
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
     local off = search_in_ramp(ramp, wrapped)
