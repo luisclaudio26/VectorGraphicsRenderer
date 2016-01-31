@@ -471,12 +471,19 @@ function prepare_table.prepare_paint.radialgradient(paint, shapexf, scenexf)
     local canonize = xform.translate(-f[1], -f[2])
 
     -- Compute angle between transformed center and x axis 
-    --( <1,0> ), then rotate clockwise
-    cx_, cy_ = transform_point(c[1], c[2], canonize)
-    local theta = cx_ / math.sqrt(cx_^2 + cy_^2)
-    theta = math.deg( math.acos(theta) )
-    canonize = canonize : rotate( - theta )
+    --( <1,0> ), then rotate clockwise.
+    -- If center does coincide with focus, then it is placed
+    -- in the origin and thus we don't need to rotate
+    local cx_, cy_ = transform_point(c[1], c[2], canonize)
+    local dist_center = math.sqrt(cx_^2 + cy_^2)
 
+    if dist_center ~= 0 then
+        local theta = cx_ / dist_center
+        theta = math.deg( math.acos(theta) )
+        canonize = canonize : rotate( - theta )
+    end
+
+    -- Canonize focus and origin
     c[1], c[2] = transform_point( c[1], c[2], canonize )
     f[1], f[2] = transform_point( f[1], f[2], canonize )
 
