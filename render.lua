@@ -466,7 +466,7 @@ function prepare_table.prepare_paint.radialgradient(paint, shapexf, scenexf)
     local xform = require("xform")
 
     fix_ramp( data.ramp )
-
+    
     -- Translate focus to the origin
     local canonize = xform.translate(-f[1], -f[2])
 
@@ -489,7 +489,7 @@ function prepare_table.prepare_paint.radialgradient(paint, shapexf, scenexf)
 
     -- Store transform and its inverse. We'll transform the point using the
     -- "direct" one, and we'll use the inverse to compose with other transformations
-    data.scene_to_grad = canonize * to_grad : inverse() * scenexf : inverse()
+    data.scene_to_grad = canonize * (to_grad : inverse() * scenexf : inverse())
 end
 
 -- prepare scene for sampling and return modified scene
@@ -662,9 +662,9 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
 
     -- Compute intersection of the line passing through origin
     -- and (x,y) with the circle
-    local a = -x^2 - y^2
+    local a = -(x^2 + y^2)
     local b = 2*(x*center[1] + y*center[2])
-    local c = r^2 - center[1]^2 - center[2]^2
+    local c = r^2 - (center[1]^2 + center[2]^2)
     local n, r1, s1, r2, s2 = quadratic.quadratic(a, b, c)
 
     -- We're interest in the positive root for t (the one which goes
