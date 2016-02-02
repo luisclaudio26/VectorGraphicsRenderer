@@ -466,8 +466,6 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     local xform = require("xform")
 
     fix_ramp( data.ramp )
-    
-    print("Original -> Center: ", c, " Focus: ", f)
 
     -- Scale system to unit circle
     local c2o, scl, o2c, rescale
@@ -480,16 +478,10 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     f[1], f[2] = transform_point(f[1], f[2], rescale)
     data.radius = 1
 
-    print("Scale -> Center: ", c, " Focus: ", f)
-    print(" Transf: ", rescale)
-
     -- Translate center to the origin
     local trans = xform.translate(-f[1], -f[2])
     c[1], c[2] = transform_point(c[1], c[2], trans)
     f[1], f[2] = transform_point(f[1], f[2], trans)
-
-    print("Translated -> Center: ", c, " Focus: ", f)
-    print(" Transf: ", trans)
 
     -- Compute angle between transformed focus and x axis.
     -- If focus and center coincide, do not rotate.
@@ -499,16 +491,11 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     if dist_center ~= 0 then
         local cos_theta = c[1] / dist_center
         local sin_theta = math.sqrt( 1 - cos_theta^2 )
-        print(">>>> Rotated ", math.deg( math.acos(cos_theta) ), " degrees")
         rot = xform.rotate( cos_theta, sin_theta )
     end
 
     c[1], c[2] = transform_point(c[1], c[2], rot)
     f[1], f[2] = transform_point(f[1], f[2], rot)
-
-    print("Rotated -> Center: ", c, " Focus: ", f)
-    print(" Transf ", rot)
-    print("----------------------------------------------------------")
 
     -- Store transform and its inverse. We'll transform the point using the
     -- "direct" one, and we'll use the inverse to compose with other transformations
@@ -698,8 +685,7 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     if n > 1 then t2 = r2/s2 end
     local t = max(t1, t2)
 
-    print("dist: ", math.sqrt( (t*x - center[1])^2 + (t*y - center[2])^2 ) )
-
+    -- Ratio of [point - focus] and [inter - focus] is 1/t
     local k = 1/t
 
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
