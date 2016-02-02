@@ -468,17 +468,17 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     fix_ramp( data.ramp )
     
     -- Translate center to the origin
-    local trans = xform.translate(-c[1], -c[2])
+    local trans = xform.translate(-f[1], -f[2])
     c[1], c[2] = transform_point(c[1], c[2], trans)
     f[1], f[2] = transform_point(f[1], f[2], trans)
 
     -- Compute angle between transformed focus and x axis.
     -- If focus and center coincide, do not rotate.
     local rot = xform.identity()
-    local dist_focus = math.sqrt( f[1]^2 + f[2]^2 )
+    local dist_center = math.sqrt( c[1]^2 + c[2]^2 )
 
-    if dist_focus ~= 0 then
-        local cos_theta = f[1] / dist_focus
+    if dist_center ~= 0 then
+        local cos_theta = c[1] / dist_center
         local theta = math.deg( math.acos(cos_theta) )
         rot = xform.rotate( - theta )
     end
@@ -660,12 +660,11 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     -- Transform (x,y)
     x, y = transform_point(x, y, data.scene_to_grad)
 
-    -- Compute intersection of the line passing through focus
+    -- Compute intersection of the line passing through origin
     -- and (x,y) with the circle
-    local dx, dy = x - f[1], y - f[2]
-    local a = dx^2 + dy^2
-    local b = 2*(f[1]*dx + f[2]*dy)
-    local c = dx^2 + dy^2 - r^2
+    local a = x^2 + y^2
+    local b = -2*(x*center[1] + y*center[2])
+    local c = center[1]^2 + center[2]^2 - r^2
     local n, r1, s1, r2, s2 = quadratic.quadratic(a, b, c)
 
     -- We're interest in the positive root for t (the one which goes
@@ -675,9 +674,7 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     if n > 1 then t2 = r2/s2 end
     local t = max(t1, t2)
 
-    local length1 = math.sqrt( a )
-    local length2 = math.sqrt( (f[1] + dx*t)^2 + (f[2] + dy*t)^2 )
-    local k = length1/length2
+    local k = 1/t
 
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
     local off = search_in_ramp(ramp, wrapped)
