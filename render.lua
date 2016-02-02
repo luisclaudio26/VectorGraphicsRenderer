@@ -173,19 +173,30 @@ function prepare_table.push_functions.degenerate_segment(x0, y0, dx0, dy0, dx1, 
 end
 
 function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, holder)
+    -- Header info
     local n = #holder + 1 
     holder[n] = {}
     holder[n].type = "quadratic_segment"
+    
     holder[n].x0, holder[n].y0 = u0, v0
     holder[n].x1, holder[n].y1 = u1, v1
     holder[n].x2, holder[n].y2 = u2, v2
     holder[n].dysign = sign(v2 - v0)
 
+    -- Bounding box
     local maxy, miny = max(v0, v2), min(v0, v2)
     local maxx, minx = max(u0, u2), min(u0, u2)
-
     holder[n].xmax, holder[n].xmin = maxx, minx
     holder[n].ymax, holder[n].ymin = maxy, miny
+
+    -- Compute transformation which maps to canonical parabola
+    local xform = require("xform")
+    local points = xform.xform(u0, v0, 1, u1, v1, 1, u2, v2, 1)
+    local M = xform.xform(0,1,0,0,0,1,1,0,0)
+    local p2b = xform.xform(1, -2, 1, 0, 2, -2, 0, 0, 1)
+
+    holder[n].canonize = M * ((points * p2b) : inverse())
+    holder[n].imp_sign = 2*v2*(-u2*v1 + u1*v2)
 end
 
 function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, holder)
@@ -556,11 +567,19 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
 
+    --[[
     -- Compute intersection
     local t_ = root_bisection(0, 1, function(t) return y0*(1-t)^2 + 2*(1-t)*t*y1 + y2*t^2 - y end )
     local x_ = x0*(1-t_)^2 + 2*(1-t_)*t_*x1 + x2*t_^2
 
     if x < x_ then return primitive.dysign
+    else return 0 end]]
+
+    -- Implicit test
+    local x_, y_ = transform_point(x, y, primitive.canonize)
+    local eval = (x_^2 - y_)
+
+    if eval < 0 then return primitive.dysign
     else return 0 end
 end
 
