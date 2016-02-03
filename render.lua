@@ -468,7 +468,7 @@ function prepare_table.prepare_paint.lineargradient(paint, scenexf)
     data.unit[2] = (p2[2] - p1[2]) / data.grad_length
 
     -- "Undo" shape transformation and precompute inverse
-    data.inversexf = paint.xf : inverse()
+    data.inversexf = paint.xf : inverse() * scenexf : inverse()
 end
 
 function prepare_table.prepare_paint.radialgradient(paint, scenexf)
@@ -513,6 +513,28 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     -- "direct" one, and we'll use the inverse to compose with other transformations
     local canonize = rot * trans * rescale
     data.scene_to_grad = canonize * (to_grad : inverse()) * (scenexf : inverse()) ]]
+
+    data.sampled_ramp = {}
+    local step = 1.0/256.0
+    for i = 0, 255, 1 do
+        local offset = i*step
+        local d, pos
+        for j = 1, #ramp-2, 2 do
+            if ramp[j+2] >= offset then 
+                d = offset - ramp[j] 
+                pos = j
+                break
+            end
+        end
+
+        --print(offset, pos)
+
+        data.sampled_ramp[i] = {}
+        data.sampled_ramp[i][1] = (1-d)*ramp[pos+1][1] + d*ramp[pos+3][1]
+        data.sampled_ramp[i][2] = (1-d)*ramp[pos+1][2] + d*ramp[pos+3][2]
+        data.sampled_ramp[i][3] = (1-d)*ramp[pos+1][3] + d*ramp[pos+3][3]
+        data.sampled_ramp[i][4] = (1-d)*ramp[pos+1][4] + d*ramp[pos+3][4]
+    end
 
     data.scene_to_grad = to_grad : inverse() * scenexf : inverse()
 
@@ -721,18 +743,22 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
 
     -- We're interest in the positive root for t (the one which goes
     -- towards the point (x,y) )
-    local t1, t2 = 0, 0
-    if n > 0 then t1 = r1/s1 end
-    if n > 1 then t2 = r2/s2 end
-    local t = max(t1, t2)    
+    t = r1/s1 
 
+    local eval = (center[1] - (f[1]+t*(x - f[1])))^2 + (center[2] - (f[2]+t*(y - f[2])))^2 - r^2
     local length2 = math.sqrt( (f[1] - (f[1]+t*(x - f[1])) )^2 + (f[2] - (f[2] + t*(y - f[2])))^2 )
 
     local k = length1 / length2
+    --print(eval, length1, length2, k)
 
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
+
+    --[[
     local off = search_in_ramp(ramp, wrapped)
-    local out = interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off])
+    local out = interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off]) ]]
+
+    local out = data.sampled_ramp[ math.floor(wrapped * 255) ]
+    --print(unpack(out))
 
     out[4] = out[4] * paint.opacity
 
