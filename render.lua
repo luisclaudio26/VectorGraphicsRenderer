@@ -478,6 +478,7 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
 
     fix_ramp( data.ramp )
 
+    --[[
     -- Scale system to unit circle
     local c2o, scl, o2c, rescale
     c2o = xform.translate(-c[1], -c[2])
@@ -511,7 +512,10 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     -- Store transform and its inverse. We'll transform the point using the
     -- "direct" one, and we'll use the inverse to compose with other transformations
     local canonize = rot * trans * rescale
-    data.scene_to_grad = canonize * (to_grad : inverse()) * (scenexf : inverse())
+    data.scene_to_grad = canonize * (to_grad : inverse()) * (scenexf : inverse()) ]]
+
+    data.scene_to_grad = to_grad : inverse() * scenexf : inverse()
+
 end
 
 -- prepare scene for sampling and return modified scene
@@ -690,6 +694,7 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     -- Transform (x,y)
     x, y = transform_point(x, y, data.scene_to_grad)
 
+    --[[
     -- Compute intersection of the line passing through origin
     -- and (x,y) with the circle
     local a = x^2 + y^2
@@ -705,7 +710,25 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local t = max(t1, t2)
 
     -- Ratio of [point - focus] and [inter - focus] is 1/t
-    local k = 1/t
+    local k = 1/t ]]
+
+    local length1 = math.sqrt( (x - f[1])^2 + (y - f[2])^2 )
+
+    local a = (f[1]^2 + f[2]^2 - 2*f[1]*x + x^2 - 2*f[2]*y + y^2)
+    local b = -2*( f[1]^2 + f[2]^2 + center[1]*x - f[1]*(center[1]+x) + center[2]*y - f[2]*(center[2]+y) )
+    local c = f[1]^2 + f[2]^2 - 2*f[1]*center[1] + center[1]^2 - 2*f[2]*center[2] + center[2]^2 - r^2
+    local n, r1, s1, r2, s2 = quadratic.quadratic(a, b, c)
+
+    -- We're interest in the positive root for t (the one which goes
+    -- towards the point (x,y) )
+    local t1, t2 = 0, 0
+    if n > 0 then t1 = r1/s1 end
+    if n > 1 then t2 = r2/s2 end
+    local t = max(t1, t2)    
+
+    local length2 = math.sqrt( (f[1] - (f[1]+t*(x - f[1])) )^2 + (f[2] - (f[2] + t*(y - f[2])))^2 )
+
+    local k = length1 / length2
 
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
     local off = search_in_ramp(ramp, wrapped)
@@ -714,7 +737,7 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     out[4] = out[4] * paint.opacity
 
     return out
-end
+end 
 
 -----------------------------------------------------------------------------------------
 ---------------------------- GEOMETRY SAMPLING ------------------------------------------
