@@ -797,6 +797,9 @@ end
 
 -- sample scene at x,y and return r,g,b,a
 local function sample(scene, x, y)
+
+    -- ISSO É UMA CÓPIA POR REFERÊNCIA, ENTÃO BGCOLOR ESTÁ MUDANDO
+    -- A CADA ITERAÇÃO
     local out = BGColor
 
     print("x, y = ", x, y)
