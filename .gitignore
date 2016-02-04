@@ -4,6 +4,7 @@
 *.exe
 *.bat
 *.zip
+*.txt
 lua/
 Rendered/
 SVG/
