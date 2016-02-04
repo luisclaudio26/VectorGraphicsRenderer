@@ -478,17 +478,6 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
 
     fix_ramp( data.ramp )
 
-    -- Scale system to unit circle
-    local c2o, scl, o2c, rescale
-    c2o = xform.translate(-c[1], -c[2])
-    scl = xform.scale( 1/r )
-    o2c = xform.translate(c[1], c[2])
-    rescale = o2c * scl * c2o
-
-    c[1], c[2] = transform_point(c[1], c[2], rescale)
-    f[1], f[2] = transform_point(f[1], f[2], rescale)
-    data.radius = 1
-
     -- Translate center to the origin
     local trans = xform.translate(-f[1], -f[2])
     c[1], c[2] = transform_point(c[1], c[2], trans)
@@ -510,7 +499,7 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
 
     -- Store transform and its inverse. We'll transform the point using the
     -- "direct" one, and we'll use the inverse to compose with other transformations
-    local canonize = rot * trans * rescale
+    local canonize = rot * trans
     data.scene_to_grad = canonize * (to_grad : inverse()) * (scenexf : inverse())
 end
 
