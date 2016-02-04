@@ -477,7 +477,7 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     local xform = require("xform")
 
     fix_ramp( data.ramp )
-
+    
     --[[
     -- Scale system to unit circle
     local c2o, scl, o2c, rescale
@@ -521,19 +521,23 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
         local d, pos
         for j = 1, #ramp-2, 2 do
             if ramp[j+2] >= offset then 
-                d = offset - ramp[j] 
+                d = (offset - ramp[j])/(ramp[j+2] - ramp[j])
                 pos = j
                 break
             end
         end
-
-        --print(offset, pos)
 
         data.sampled_ramp[i] = {}
         data.sampled_ramp[i][1] = (1-d)*ramp[pos+1][1] + d*ramp[pos+3][1]
         data.sampled_ramp[i][2] = (1-d)*ramp[pos+1][2] + d*ramp[pos+3][2]
         data.sampled_ramp[i][3] = (1-d)*ramp[pos+1][3] + d*ramp[pos+3][3]
         data.sampled_ramp[i][4] = (1-d)*ramp[pos+1][4] + d*ramp[pos+3][4]
+
+        print(d, 1-d)
+    end
+
+    for i = 1, 255 do
+        print(i, unpack(data.sampled_ramp[i]))
     end
 
     data.scene_to_grad = to_grad : inverse() * scenexf : inverse()
@@ -758,7 +762,8 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local out = interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off]) ]]
 
     local out = data.sampled_ramp[ math.floor(wrapped * 255) ]
-    --print(unpack(out))
+
+    --print(k, wrapped, unpack(out))
 
     out[4] = out[4] * paint.opacity
 
