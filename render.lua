@@ -798,12 +798,11 @@ end
 -- sample scene at x,y and return r,g,b,a
 local function sample(scene, x, y)
 
-    -- ISSO É UMA CÓPIA POR REFERÊNCIA, ENTÃO BGCOLOR ESTÁ MUDANDO
-    -- A CADA ITERAÇÃO
-    local out = BGColor
-
-    print("x, y = ", x, y)
-    print("out = ", out, "BGColor = ", BGColor)
+    -- Deep copy of BGColor
+    local out = {}
+    for i, v in ipairs(BGColor) do
+        out[i] = v
+    end
 
     for i = 1, #scene.elements do
         local element = scene.elements[i]
@@ -811,8 +810,6 @@ local function sample(scene, x, y)
 
         -- Superpose images
         if temp ~= BGColor then
-
-            print("Temp = ", temp)
 
             -- Alpha blend current color with new layer
             for j = 1, 3 do 
@@ -823,7 +820,6 @@ local function sample(scene, x, y)
         end
     end
 
-    print("Returning: ", out)
     return unpack(out)
 end
 
