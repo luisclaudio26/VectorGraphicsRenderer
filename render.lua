@@ -92,12 +92,8 @@ local function search_in_ramp(ramp, value)
     -- Just a linear search. Other versions may sample
     -- the ramp and just do a look-up table for this
     for i = 1, #ramp-2, 2 do
-        if ramp[i] <= value and value < ramp[i+2] then
-            return i
-        end
+        if ramp[i+2] >= value then return i end
     end
-
-    return (#ramp-3)
 end
 
 local function interpolate_colors(color1, color2, t)
@@ -458,17 +454,33 @@ end
 function prepare_table.prepare_paint.lineargradient(paint, scenexf)
     local data = paint.data
     local p1, p2 = data.p1, data.p2
-
+    local xform = require("xform")
     fix_ramp( data.ramp )
 
+    -- Translate p1 to the origin
+    local trans = xform.translate(-p1[1], -p1[2])
+    data.p1[1], data.p1[2] = transform_point(p1[1], p1[2], trans)
+    data.p2[1], data.p2[2] = transform_point(p2[1], p2[2], trans)
+
+    -- Rotate
+    local rot = xform.identity()
+    local dist_center = math.sqrt( p2[1]^2 + p2[2]^2 )
+
+    if dist_center ~= 0 then
+        local cos_theta = p2[1] / dist_center
+        local sin_theta = math.sqrt( 1 - cos_theta^2 )
+        rot = xform.rotate( cos_theta, -sin_theta )
+    end
+
+    data.p1[1], data.p1[2] = transform_point(p1[1], p1[2], rot)
+    data.p2[1], data.p2[2] = transform_point(p2[1], p2[2], rot)    
+
     -- Precompute values
-    data.grad_length =  math.sqrt( (p1[1] - p2[1])^2 + (p1[2] - p2[2])^2 )
-    data.unit = {}
-    data.unit[1] = (p2[1] - p1[1]) / data.grad_length
-    data.unit[2] = (p2[2] - p1[2]) / data.grad_length
+    data.grad_length = p2[1] - p1[1]
 
     -- "Undo" shape transformation and precompute inverse
-    data.inversexf = paint.xf : inverse() * scenexf : inverse()
+    local canonize = rot * trans
+    data.scene_to_grad = canonize * paint.xf : inverse() * scenexf : inverse()
 end
 
 function prepare_table.prepare_paint.radialgradient(paint, scenexf)
@@ -491,7 +503,7 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     if dist_center ~= 0 then
         local cos_theta = c[1] / dist_center
         local sin_theta = math.sqrt( 1 - cos_theta^2 )
-        rot = xform.rotate( cos_theta, sin_theta )
+        rot = xform.rotate( cos_theta, -sin_theta )
     end
 
     c[1], c[2] = transform_point(c[1], c[2], rot)
@@ -656,16 +668,18 @@ end
 function sample_table.sample_paint.lineargradient(paint, x, y)
 
     local data, ramp = paint.data, paint.data.ramp
-    local x0, y0 = data.p1[1], data.p1[2]
-    x_, y_ = transform_point(x, y, data.inversexf)
+    local p1 = data.p1
+    x, y = transform_point(x, y, data.scene_to_grad)
 
-    -- Dot product (p-p1) . (p2 - p1) / ||p2-p1||
-    local k = (x_ - x0) * data.unit[1] + (y_ - y0) * data.unit[2]
-    local k = k / data.grad_length
+    -- Compute ratio
+    local k = (x-p1[1]) / data.grad_length
 
+    -- Wrap, sample, interpolate
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
     local off = search_in_ramp(ramp, wrapped)
-    local out = interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off])
+
+    local inter_factor =  (wrapped - ramp[off])/(ramp[off+2] - ramp[off])
+    local out = interpolate_colors(ramp[off+1], ramp[off+3],  inter_factor)
 
     out[4] = out[4] * paint.opacity
 
@@ -677,7 +691,7 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local ramp, center, f, r = data.ramp, data.center, data.focus, data.radius
 
     -- Transform (x,y)
-    print("x, y: ", x, y)
+    --print("x, y: ", x, y)
     x, y = transform_point(x, y, data.scene_to_grad)
 
     -- Compute intersection of the line passing through origin
@@ -701,11 +715,13 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local off = search_in_ramp(ramp, wrapped)
     local out = interpolate_colors(ramp[off+1], ramp[off+3], (wrapped - ramp[off])/(ramp[off+2] - ramp[off])  )
 
+    --[[
     print("Transformed x, y : ", x, y)
     print("t = ", t, " k = ", k, " wrapped: ", wrapped)
-    print("center: ", focus[1], focus[2], " radius: ", r)
-    print("distance to focus: ", math.sqrt(  ) )
-    print("-----------------------------------------")
+    print("focus: ", f[1], f[2], " radius: ", r)
+    print("distance inter -> focus: ", math.sqrt( (t*(x - f[1]))^2 + (t*(y - f[2])^2) ) )
+    print("distance point -> focus: ", math.sqrt( (x - f[1])^2 + (y - f[2])^2) )
+    print("-----------------------------------------") ]]
 
     -- Compose with opacity
     out[4] = out[4] * paint.opacity
