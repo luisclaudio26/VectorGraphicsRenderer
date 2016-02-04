@@ -84,8 +84,12 @@ local function compute_rational_maxima(x0, x1, x2, w)
     return out1, out2
 end
 
-local function alpha_composite(c1, c2, a)
-    return c1 + (1-a)*c2
+local function alpha_composite(c1, a1, c2, a2)
+    -- Assumes non-premultiplied values
+    local num = c1*a1 + c2*a2*(1-a1)
+    local den = a1 + a2*(1-a1)
+
+    return num/den
 end
 
 local function search_in_ramp(ramp, value)
@@ -793,30 +797,30 @@ end
 
 -- sample scene at x,y and return r,g,b,a
 local function sample(scene, x, y)
-    local out = {0,0,0,0}
+    local out = BGColor
 
-    for i = #scene.elements, 1, -1 do
+    print("x, y = ", x, y)
+    print("out = ", out, "BGColor = ", BGColor)
+
+    for i = 1, #scene.elements do
         local element = scene.elements[i]
         local temp = sample_table[element.shape.type](element, x, y)
 
         -- Superpose images
         if temp ~= BGColor then
 
+            print("Temp = ", temp)
+
             -- Alpha blend current color with new layer
-            for j = 1, 4 do
-                out[j] = alpha_composite(out[j], temp[j], out[4])
+            for j = 1, 3 do 
+                out[j] = alpha_composite(temp[j], temp[4], out[j], out[4])
             end
 
-            -- Premultiply values in OUT
-            for j = 1, 3 do out[j] = out[j]*out[4] end
+            --out[4] = temp[4] + out[4]*(1 - temp[4])
         end
     end
 
-    -- Compose with background
-    for j = 1, 4 do
-        out[j] = alpha_composite(out[j], BGColor[j], out[4])
-    end
-
+    print("Returning: ", out)
     return unpack(out)
 end
 
