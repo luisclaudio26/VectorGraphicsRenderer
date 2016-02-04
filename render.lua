@@ -477,8 +477,7 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     local xform = require("xform")
 
     fix_ramp( data.ramp )
-    
-    --[[
+
     -- Scale system to unit circle
     local c2o, scl, o2c, rescale
     c2o = xform.translate(-c[1], -c[2])
@@ -512,36 +511,7 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     -- Store transform and its inverse. We'll transform the point using the
     -- "direct" one, and we'll use the inverse to compose with other transformations
     local canonize = rot * trans * rescale
-    data.scene_to_grad = canonize * (to_grad : inverse()) * (scenexf : inverse()) ]]
-
-    data.sampled_ramp = {}
-    local step = 1.0/256.0
-    for i = 0, 255, 1 do
-        local offset = i*step
-        local d, pos
-        for j = 1, #ramp-2, 2 do
-            if ramp[j+2] >= offset then 
-                d = (offset - ramp[j])/(ramp[j+2] - ramp[j])
-                pos = j
-                break
-            end
-        end
-
-        data.sampled_ramp[i] = {}
-        data.sampled_ramp[i][1] = (1-d)*ramp[pos+1][1] + d*ramp[pos+3][1]
-        data.sampled_ramp[i][2] = (1-d)*ramp[pos+1][2] + d*ramp[pos+3][2]
-        data.sampled_ramp[i][3] = (1-d)*ramp[pos+1][3] + d*ramp[pos+3][3]
-        data.sampled_ramp[i][4] = (1-d)*ramp[pos+1][4] + d*ramp[pos+3][4]
-
-        print(d, 1-d)
-    end
-
-    for i = 1, 255 do
-        print(i, unpack(data.sampled_ramp[i]))
-    end
-
-    data.scene_to_grad = to_grad : inverse() * scenexf : inverse()
-
+    data.scene_to_grad = canonize * (to_grad : inverse()) * (scenexf : inverse())
 end
 
 -- prepare scene for sampling and return modified scene
@@ -720,7 +690,6 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     -- Transform (x,y)
     x, y = transform_point(x, y, data.scene_to_grad)
 
-    --[[
     -- Compute intersection of the line passing through origin
     -- and (x,y) with the circle
     local a = x^2 + y^2
@@ -736,34 +705,11 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local t = max(t1, t2)
 
     -- Ratio of [point - focus] and [inter - focus] is 1/t
-    local k = 1/t ]]
-
-    local length1 = math.sqrt( (x - f[1])^2 + (y - f[2])^2 )
-
-    local a = (f[1]^2 + f[2]^2 - 2*f[1]*x + x^2 - 2*f[2]*y + y^2)
-    local b = -2*( f[1]^2 + f[2]^2 + center[1]*x - f[1]*(center[1]+x) + center[2]*y - f[2]*(center[2]+y) )
-    local c = f[1]^2 + f[2]^2 - 2*f[1]*center[1] + center[1]^2 - 2*f[2]*center[2] + center[2]^2 - r^2
-    local n, r1, s1, r2, s2 = quadratic.quadratic(a, b, c)
-
-    -- We're interest in the positive root for t (the one which goes
-    -- towards the point (x,y) )
-    t = r1/s1 
-
-    local eval = (center[1] - (f[1]+t*(x - f[1])))^2 + (center[2] - (f[2]+t*(y - f[2])))^2 - r^2
-    local length2 = math.sqrt( (f[1] - (f[1]+t*(x - f[1])) )^2 + (f[2] - (f[2] + t*(y - f[2])))^2 )
-
-    local k = length1 / length2
-    --print(eval, length1, length2, k)
+    local k = 1/t
 
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
-
-    --[[
     local off = search_in_ramp(ramp, wrapped)
-    local out = interpolate_colors(ramp[off+1], ramp[off+3], wrapped - ramp[off]) ]]
-
-    local out = data.sampled_ramp[ math.floor(wrapped * 255) ]
-
-    --print(k, wrapped, unpack(out))
+    local out = interpolate_colors(ramp[off+1], ramp[off+3], (wrapped - ramp[off])/(ramp[off+2] - ramp[off])  )
 
     out[4] = out[4] * paint.opacity
 
