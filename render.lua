@@ -677,6 +677,7 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local ramp, center, f, r = data.ramp, data.center, data.focus, data.radius
 
     -- Transform (x,y)
+    print("x, y: ", x, y)
     x, y = transform_point(x, y, data.scene_to_grad)
 
     -- Compute intersection of the line passing through origin
@@ -700,6 +701,13 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local off = search_in_ramp(ramp, wrapped)
     local out = interpolate_colors(ramp[off+1], ramp[off+3], (wrapped - ramp[off])/(ramp[off+2] - ramp[off])  )
 
+    print("Transformed x, y : ", x, y)
+    print("t = ", t, " k = ", k, " wrapped: ", wrapped)
+    print("center: ", focus[1], focus[2], " radius: ", r)
+    print("distance to focus: ", math.sqrt(  ) )
+    print("-----------------------------------------")
+
+    -- Compose with opacity
     out[4] = out[4] * paint.opacity
 
     return out
