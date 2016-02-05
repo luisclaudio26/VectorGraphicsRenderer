@@ -3,6 +3,7 @@ local image = require"image"
 local chronos = require"chronos"
 
 local bezier, quadratic = require("lua.bezier"), require("lua.quadratic")
+local xform = require("xform")
 local unpack, pack = table.unpack, table.pack
 local max, min = math.max, math.min 
 local floor, ceil = math.floor, math.ceil
@@ -190,7 +191,6 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n].ymax, holder[n].ymin = maxy, miny
 
     -- Compute transformation which maps to canonical parabola
-    local xform = require("xform")
     local points = xform.xform(u0, v0, 1, u1, v1, 1, u2, v2, 1)
     local M = xform.xform(0,1,0,0,0,1,1,0,0)
     local p2b = xform.xform(1, -2, 1, 0, 2, -2, 0, 0, 1)
@@ -454,11 +454,10 @@ function prepare_table.prepare_paint.solid(paint, scenexf)
     paint.data[4] = paint.data[4] * paint.opacity
 end
 
--- This is still the naive way to do!
 function prepare_table.prepare_paint.lineargradient(paint, scenexf)
     local data = paint.data
     local p1, p2 = data.p1, data.p2
-    local xform = require("xform")
+
     fix_ramp( data.ramp )
 
     -- Translate p1 to the origin
@@ -490,7 +489,6 @@ end
 function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     local data, to_grad = paint.data, paint.xf
     local ramp, c, f, r = data.ramp, data.center, data.focus, data.radius
-    local xform = require("xform")
 
     fix_ramp( data.ramp )
 
@@ -694,8 +692,6 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
     local data = paint.data
     local ramp, center, f, r = data.ramp, data.center, data.focus, data.radius
 
-    -- Transform (x,y)
-    --print("x, y: ", x, y)
     x, y = transform_point(x, y, data.scene_to_grad)
 
     -- Compute intersection of the line passing through origin
@@ -717,15 +713,9 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
 
     local wrapped = sample_table.sample_paint.spread_table[ramp.spread](k)
     local off = search_in_ramp(ramp, wrapped)
-    local out = interpolate_colors(ramp[off+1], ramp[off+3], (wrapped - ramp[off])/(ramp[off+2] - ramp[off])  )
 
-    --[[
-    print("Transformed x, y : ", x, y)
-    print("t = ", t, " k = ", k, " wrapped: ", wrapped)
-    print("focus: ", f[1], f[2], " radius: ", r)
-    print("distance inter -> focus: ", math.sqrt( (t*(x - f[1]))^2 + (t*(y - f[2])^2) ) )
-    print("distance point -> focus: ", math.sqrt( (x - f[1])^2 + (y - f[2])^2) )
-    print("-----------------------------------------") ]]
+    local inter_factor = (wrapped - ramp[off])/(ramp[off+2] - ramp[off]) 
+    local out = interpolate_colors(ramp[off+1], ramp[off+3],  inter_factor)
 
     -- Compose with opacity
     out[4] = out[4] * paint.opacity
@@ -816,7 +806,7 @@ local function sample(scene, x, y)
                 out[j] = alpha_composite(temp[j], temp[4], out[j], out[4])
             end
 
-            --out[4] = temp[4] + out[4]*(1 - temp[4])
+            out[4] = temp[4] + out[4]*(1 - temp[4])
         end
     end
 
