@@ -190,13 +190,12 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n].xmax, holder[n].xmin = maxx, minx
     holder[n].ymax, holder[n].ymin = maxy, miny
 
-    -- Compute transformation which maps to canonical parabola
-    local points = xform.xform(u0, v0, 1, u1, v1, 1, u2, v2, 1)
-    local M = xform.xform(0,1,0,0,0,1,1,0,0)
-    local p2b = xform.xform(1, -2, 1, 0, 2, -2, 0, 0, 1)
+    -- Compute implicit equation based on resultant
+    holder[n].implicit = function(x, y)
+        return ((2*u1 - u2)*y + x*(v2 - 2*v1))^2 - 4*(x*v1 - u1*y)*(u2*v1 - u1*v2) 
+    end
 
-    holder[n].canonize = M * ((points * p2b) : inverse())
-    holder[n].imp_sign = 2*v2*(-u2*v1 + u1*v2)
+    holder[n].imp_sign = sign( 2*v2*(-u2*v1 + u1*v2) )
 end
 
 function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, holder)
@@ -589,8 +588,7 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     else return 0 end]]
 
     -- Implicit test
-    local x_, y_ = transform_point(x, y, primitive.canonize)
-    local eval = (x_^2 - y_)
+    local eval = primitive.implicit(x, y) * primitive.imp_sign
 
     if eval < 0 then return primitive.dysign
     else return 0 end
