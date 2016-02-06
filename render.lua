@@ -475,9 +475,7 @@ function prepare_table.prepare_paint.lineargradient(paint, scenexf)
 
         -- Rotate clockwise if center is above <1, 0>, 
         -- counter-clockwise otherwise
-        if p2[2] > 0 then
-            sin_theta = -sin_theta
-        end
+        if p2[2] > 0 then sin_theta = -sin_theta end
 
         rot = xform.rotate( cos_theta, sin_theta )
     end
@@ -512,7 +510,12 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     if dist_center ~= 0 then
         local cos_theta = c[1] / dist_center
         local sin_theta = math.sqrt( 1 - cos_theta^2 )
-        rot = xform.rotate( cos_theta, -sin_theta )
+
+        -- Rotate clockwise if center is above <1, 0>, 
+        -- counter-clockwise otherwise
+        if c[2] > 0 then sin_theta = -sin_theta end
+
+        rot = xform.rotate( cos_theta, sin_theta )
     end
 
     c[1], c[2] = transform_point(c[1], c[2], rot)
