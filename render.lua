@@ -173,7 +173,7 @@ function prepare_table.push_functions.degenerate_segment(x0, y0, dx0, dy0, dx1, 
     holder[n].dx1, holder[n].dy1 = dx1, dy1
 end
 
-function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, holder)
+function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, implicit_form, holder)
     -- Header info
     local n = #holder + 1 
     holder[n] = {}
@@ -190,12 +190,23 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n].xmax, holder[n].xmin = maxx, minx
     holder[n].ymax, holder[n].ymin = maxy, miny
 
-    -- Compute implicit equation based on resultant
-    holder[n].implicit = function(x, y)
-        return ((2*u1 - u2)*y + x*(v2 - 2*v1))^2 - 4*(x*v1 - u1*y)*(u2*v1 - u1*v2) 
+    -- Triangle test: compute the diagonal cutting
+    -- the bounding box in two triangles
+    local diag_a = v2 - v0
+    local diag_b = u0 - u2
+    local diag_c = -diag_a * u0 - diag_b * v0
+    local diag_sign = sign(diag_a)
+    diag_a, diag_b, diag_c = diag_a*diag_sign, diag_b*diag_sign, diag_c*diag_sign
+
+    holder[n].diagonal = function(x, y)
+        return sign( diag_a*x + diag_b*y + diag_c )
     end
 
-    holder[n].imp_sign = sign( 2*v2*(-u2*v1 + u1*v2) )
+    holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at2(0.5, u0, v0, u1, v1, u2, v2) )
+
+    -- Compute implicit equation based on resultant
+    holder[n].implicit = implicit_form
+    holder[n].imp_sign = sign( 2*v2*(u1*v2 - u2*v1) )
 end
 
 function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, holder)
@@ -292,6 +303,14 @@ function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
     local x1, y1 = data[offset+2], data[offset+3]
     local x2, y2 = data[offset+4], data[offset+5]
 
+    -- Compute implicit form
+    local implicit = function(x, y)
+        local diag1, diag2
+        diag1 = (2*x*y1 - 2*x1*y) * (2*x2*y1 - 2*x1*y2)
+        diag2 = ( y*(2*x1 - x2) + x*(y2 - 2*y1) )^2
+        return diag2 - diag1
+    end
+
     -- Calculate maxima points
     local t = {}
     t[1], t[4] = 0, 1
@@ -303,7 +322,7 @@ function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
     for i = 2, 4 do
         if t[i-1] ~= t[i] then
             u0, v0, u1, v1, u2, v2 = bezier.cut2(t[i-1], t[i], x0, y0, x1, y1, x2, y2)
-            prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, primitives)
+            prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, implicit, primitives)
         end
     end
 end
@@ -579,18 +598,25 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
 
-    --[[
-    -- Compute intersection
-    local t_ = root_bisection(0, 1, function(t) return y0*(1-t)^2 + 2*(1-t)*t*y1 + y2*t^2 - y end )
-    local x_ = x0*(1-t_)^2 + 2*(1-t_)*t_*x1 + x2*t_^2
-
-    if x < x_ then return primitive.dysign
-    else return 0 end]]
+    -- Triangle test -> skip if point is inside the triangle fully covered
+    -- (or fully uncovered) by Bézier
+    local point_diagonal = primitive.diagonal(x, y)
+    if point_diagonal == -primitive.mid_point_diagonal then
+        if point_diagonal < 0 then
+            return primitive.dysign
+        else
+            return 0
+        end
+    end
 
     -- Implicit test
-    local eval = primitive.implicit(x, y) * primitive.imp_sign
+    local eval = primitive.implicit(x, y)
+    if primitive.imp_sign < 0 then eval = -eval end
 
-    if eval < 0 then return primitive.dysign
+    --print("Bezier: ", x0, y0, x1, y1, x2, y2, " x, y: ", x, y, " eval: ", eval, " implicit sign: ", primitive.imp_sign)
+
+    if eval < 0 then
+        return primitive.dysign
     else return 0 end
 end
 
