@@ -597,6 +597,10 @@ end
 -- TODO: Fusion these two functions
 function sample_table.sample_path.quadratic_segment(primitive, x, y)
 
+    -- We can maintain the bounding box untransformed, so we avoid
+    -- this transformation for points which won't be computed
+    x, y = transform_point(x, y, primitive.scene_to_canonic)
+
     -- Bounding box test
     if y >= primitive.ymax or y < primitive.ymin then return 0 end
     if x > primitive.xmax then return 0 end
@@ -605,8 +609,6 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x0, y0 = primitive.x0, primitive.y0
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
-
-    x, y = transform_point(x, y, primitive.scene_to_canonic)
 
     -- Triangle test -> skip if point is inside the triangle fully covered
     -- (or fully uncovered) by Bézier
@@ -622,8 +624,6 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     -- Implicit test
     local eval = primitive.implicit(x, y)
     if primitive.imp_sign < 0 then eval = -eval end
-
-    --print("Bezier: ", x0, y0, x1, y1, x2, y2, " x, y: ", x, y, " eval: ", eval, " implicit sign: ", primitive.imp_sign)
 
     if eval < 0 then
         return primitive.dysign
