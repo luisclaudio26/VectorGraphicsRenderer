@@ -12,7 +12,7 @@ local abs = math.abs
 local _M = driver.new()
 
 local BGColor = require("lua.color").rgb(1,1,1,1)
-local epsilon, max_iteration = 0.000000000001, 50
+local epsilon, max_iteration = 0.0000000001, 50
 
 -----------------------------------------------------------------------------------------
 -------------------------------- AUXILIAR FUNCTIONS -------------------------------------
@@ -179,6 +179,12 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n] = {}
     holder[n].type = "quadratic_segment"
     
+    print("Code : ", holder[n])
+    print("Control points: ")
+    print(u0,v0,u1,v1,u2,v2)
+    local pre_det = xform.xform(u0,v0,1,u1,v1,1,u2,v2,1) : det()
+    print(pre_det)
+
      -- Bounding box (of untransformed points)
     local maxy, miny = max(v0, v2), min(v0, v2)
     local maxx, minx = max(u0, u2), min(u0, u2)
@@ -227,8 +233,8 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     else
         imp = function(x, y)
             local p0, p1 = {}, {}
-            p0[0], p1[0] = min(u0, min(u1, u2)), max(u0, max(u1, u2))
-            p0[1], p1[1] = min(v0, min(v1, v2)), max(v0, max(v1, v2))
+            p0[0], p1[0] = u0, u2
+            p0[1], p1[1] = v0, v2
 
             local imp_a, imp_b, imp_c
             imp_a = p1[1] - p0[1]
@@ -356,6 +362,7 @@ function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
     -- Split bézier
     for i = 2, 4 do
         if t[i-1] ~= t[i] then
+            print(t[i], " : ")
             u0, v0, u1, v1, u2, v2 = bezier.cut2(t[i-1], t[i], x0, y0, x1, y1, x2, y2)
             prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, primitives)
         end
@@ -633,29 +640,20 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
 
-    print("Untransformed (x,y): ", x, y)
-    print("Primitive: ", primitive)
-    print("Accept by bounding box: ", primitive.xmin, primitive.xmax, primitive.ymin, primitive.ymax)
-
+    print("Untransformed: ", x, y, " object: ", primitive)
+    print("-------")
     x, y = transform_point(x, y, primitive.scene_to_canonic)
-
-    print("Transformed (x,y): ", x, y)
 
     -- Triangle test -> skip if point is inside the triangle fully covered
     -- (or fully uncovered) by Bézier
     local point_diagonal = primitive.diagonal(x, y)
     if point_diagonal == -primitive.mid_point_diagonal then
-        print(">> triangle test")
-        if point_diagonal < 0 then
-            return primitive.dysign
-        else
-            return 0
-        end
+        if point_diagonal < 0 then return primitive.dysign
+        else return 0 end
     end
 
     -- Implicit test
     local eval = primitive.implicit(x, y)
-    print("Evaluation: ", eval)
 
     if eval < 0 then
         return primitive.dysign
