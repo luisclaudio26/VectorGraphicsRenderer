@@ -209,12 +209,30 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at2(0.5, u0, v0, u1, v1, u2, v2) )
 
     -- Compute implicit equation based on resultant
-    holder[n].implicit = function(x, y)
-        local diag1 = (-2*u1*y + 2*x*v1)*(2*u2*v1 - 2*u1*v2) 
-        local diag2 = ((2*u1 - u2)*y + x*(-2*v1 + v2))^2
-        return diag2 - diag1
+    local det = xform.xform(u0, v0, 1, u1, v1, 1, u2, v2, 1) : det()
+    local imp
+
+    if det ~= 0 then
+        imp = function(x, y)
+            local diag1 = (-2*u1*y + 2*x*v1)*(2*u2*v1 - 2*u1*v2) 
+            local diag2 = ((2*u1 - u2)*y + x*(-2*v1 + v2))^2
+            return diag2 - diag1
+        end
+    else
+        imp = function(x, y)
+            local p0, p1 = {}, {}
+            p0[0], p1[0] = min(u0, min(u1, u2)), max(u0, max(u1, u2))
+            p0[1], p1[1] = min(v0, min(v1, v2)), max(v0, max(v1, v2))
+
+            local imp_a, imp_b, imp_c
+            imp_a = p1[1] - p0[1]
+            imp_b = p0[0] - p1[0]
+            imp_c = -imp_a * p0[0] - imp_b * p0[1]
+            return imp_a * x + imp_b * y + imp_c
+        end
     end
 
+    holder[n].implicit = imp
     holder[n].imp_sign = sign( 2*v2*(u1*v2 - u2*v1) )
 
     -- Store transformed control points
