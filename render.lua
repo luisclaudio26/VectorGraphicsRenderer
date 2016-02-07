@@ -173,15 +173,19 @@ function prepare_table.push_functions.degenerate_segment(x0, y0, dx0, dy0, dx1, 
     holder[n].dx1, holder[n].dy1 = dx1, dy1
 end
 
-function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, implicit_form, holder)
+function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, holder)
     -- Header info
     local n = #holder + 1 
     holder[n] = {}
     holder[n].type = "quadratic_segment"
     
-    holder[n].x0, holder[n].y0 = u0, v0
-    holder[n].x1, holder[n].y1 = u1, v1
-    holder[n].x2, holder[n].y2 = u2, v2
+    -- Compute transformation to origin and translate control points
+    local trans = xform.translate(-u0, -v0)
+
+    u0, v0 = transform_point(u0, v0, trans)
+    u1, v1 = transform_point(u1, v1, trans)
+    u2, v2 = transform_point(u2, v2, trans)
+
     holder[n].dysign = sign(v2 - v0)
 
     -- Bounding box
@@ -205,8 +209,20 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at2(0.5, u0, v0, u1, v1, u2, v2) )
 
     -- Compute implicit equation based on resultant
-    holder[n].implicit = implicit_form
+    holder[n].implicit = function(x, y)
+        local diag1 = (-2*u1*y + 2*x*v1)*(2*u2*v1 - 2*u1*v2) 
+        local diag2 = ((2*u1 - u2)*y + x*(-2*v1 + v2))^2
+        return diag2 - diag1
+    end
+
     holder[n].imp_sign = sign( 2*v2*(u1*v2 - u2*v1) )
+
+    -- Store transformed control points
+    holder[n].x0, holder[n].y0 = u0, v0
+    holder[n].x1, holder[n].y1 = u1, v1
+    holder[n].x2, holder[n].y2 = u2, v2
+
+    holder[n].scene_to_canonic = trans
 end
 
 function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, holder)
@@ -303,14 +319,6 @@ function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
     local x1, y1 = data[offset+2], data[offset+3]
     local x2, y2 = data[offset+4], data[offset+5]
 
-    -- Compute implicit form
-    local implicit = function(x, y)
-        local diag1, diag2
-        diag1 = (2*x*y1 - 2*x1*y) * (2*x2*y1 - 2*x1*y2)
-        diag2 = ( y*(2*x1 - x2) + x*(y2 - 2*y1) )^2
-        return diag2 - diag1
-    end
-
     -- Calculate maxima points
     local t = {}
     t[1], t[4] = 0, 1
@@ -322,7 +330,7 @@ function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
     for i = 2, 4 do
         if t[i-1] ~= t[i] then
             u0, v0, u1, v1, u2, v2 = bezier.cut2(t[i-1], t[i], x0, y0, x1, y1, x2, y2)
-            prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, implicit, primitives)
+            prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, primitives)
         end
     end
 end
@@ -597,6 +605,8 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x0, y0 = primitive.x0, primitive.y0
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
+
+    x, y = transform_point(x, y, primitive.scene_to_canonic)
 
     -- Triangle test -> skip if point is inside the triangle fully covered
     -- (or fully uncovered) by Bézier
