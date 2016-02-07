@@ -174,18 +174,13 @@ function prepare_table.push_functions.degenerate_segment(x0, y0, dx0, dy0, dx1, 
 end
 
 function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, holder)
+
     -- Header info
     local n = #holder + 1 
     holder[n] = {}
     holder[n].type = "quadratic_segment"
-    
-    print("Code : ", holder[n])
-    print("Control points: ")
-    print(u0,v0,u1,v1,u2,v2)
-    local pre_det = xform.xform(u0,v0,1,u1,v1,1,u2,v2,1) : det()
-    print(pre_det)
 
-     -- Bounding box (of untransformed points)
+    -- Bounding box (of untransformed points)
     local maxy, miny = max(v0, v2), min(v0, v2)
     local maxx, minx = max(u0, u2), min(u0, u2)
     holder[n].xmax, holder[n].xmin = maxx, minx
@@ -220,8 +215,8 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
 
     if det ~= 0 then
         local imp_sign = sign( 2*v2*(u1*v2 - u2*v1) )
-
         imp = function(x, y)
+            local imp_sign = sign( 2*v2*(u1*v2 - u2*v1) )
             local diag1 = (-2*u1*y + 2*x*v1)*(2*u2*v1 - 2*u1*v2) 
             local diag2 = ((2*u1 - u2)*y + x*(-2*v1 + v2))^2
 
@@ -362,7 +357,6 @@ function prepare_table.instructions.quadratic_segment(shape, offset, iadd)
     -- Split bézier
     for i = 2, 4 do
         if t[i-1] ~= t[i] then
-            print(t[i], " : ")
             u0, v0, u1, v1, u2, v2 = bezier.cut2(t[i-1], t[i], x0, y0, x1, y1, x2, y2)
             prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, primitives)
         end
@@ -640,8 +634,6 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
 
-    print("Untransformed: ", x, y, " object: ", primitive)
-    print("-------")
     x, y = transform_point(x, y, primitive.scene_to_canonic)
 
     -- Triangle test -> skip if point is inside the triangle fully covered
