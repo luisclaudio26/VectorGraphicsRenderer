@@ -179,6 +179,12 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     holder[n] = {}
     holder[n].type = "quadratic_segment"
     
+     -- Bounding box (of untransformed points)
+    local maxy, miny = max(v0, v2), min(v0, v2)
+    local maxx, minx = max(u0, u2), min(u0, u2)
+    holder[n].xmax, holder[n].xmin = maxx, minx
+    holder[n].ymax, holder[n].ymin = maxy, miny
+
     -- Compute transformation to origin and translate control points
     local trans = xform.translate(-u0, -v0)
 
@@ -187,12 +193,6 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     u2, v2 = transform_point(u2, v2, trans)
 
     holder[n].dysign = sign(v2 - v0)
-
-    -- Bounding box
-    local maxy, miny = max(v0, v2), min(v0, v2)
-    local maxx, minx = max(u0, u2), min(u0, u2)
-    holder[n].xmax, holder[n].xmin = maxx, minx
-    holder[n].ymax, holder[n].ymin = maxy, miny
 
     -- Triangle test: compute the diagonal cutting
     -- the bounding box in two triangles
@@ -213,10 +213,16 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     local imp
 
     if det ~= 0 then
+        local imp_sign = sign( 2*v2*(u1*v2 - u2*v1) )
+
         imp = function(x, y)
             local diag1 = (-2*u1*y + 2*x*v1)*(2*u2*v1 - 2*u1*v2) 
             local diag2 = ((2*u1 - u2)*y + x*(-2*v1 + v2))^2
-            return diag2 - diag1
+
+            local eval = diag2 - diag1
+            if imp_sign < 0 then eval = -eval end
+
+            return eval 
         end
     else
         imp = function(x, y)
@@ -228,12 +234,15 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
             imp_a = p1[1] - p0[1]
             imp_b = p0[0] - p1[0]
             imp_c = -imp_a * p0[0] - imp_b * p0[1]
+
+            local imp_sign = sign(imp_a)
+            imp_a, imp_b, imp_c = imp_a*imp_sign, imp_b*imp_sign, imp_c*imp_sign
+
             return imp_a * x + imp_b * y + imp_c
         end
     end
 
     holder[n].implicit = imp
-    holder[n].imp_sign = sign( 2*v2*(u1*v2 - u2*v1) )
 
     -- Store transformed control points
     holder[n].x0, holder[n].y0 = u0, v0
@@ -615,10 +624,6 @@ end
 -- TODO: Fusion these two functions
 function sample_table.sample_path.quadratic_segment(primitive, x, y)
 
-    -- We can maintain the bounding box untransformed, so we avoid
-    -- this transformation for points which won't be computed
-    x, y = transform_point(x, y, primitive.scene_to_canonic)
-
     -- Bounding box test
     if y >= primitive.ymax or y < primitive.ymin then return 0 end
     if x > primitive.xmax then return 0 end
@@ -627,6 +632,8 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x0, y0 = primitive.x0, primitive.y0
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
+
+    x, y = transform_point(x, y, primitive.scene_to_canonic)
 
     -- Triangle test -> skip if point is inside the triangle fully covered
     -- (or fully uncovered) by Bézier
@@ -641,7 +648,6 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
 
     -- Implicit test
     local eval = primitive.implicit(x, y)
-    if primitive.imp_sign < 0 then eval = -eval end
 
     if eval < 0 then
         return primitive.dysign
