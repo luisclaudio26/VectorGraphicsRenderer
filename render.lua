@@ -633,12 +633,19 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
 
+    print("Untransformed (x,y): ", x, y)
+    print("Primitive: ", primitive)
+    print("Accept by bounding box: ", primitive.xmin, primitive.xmax, primitive.ymin, primitive.ymax)
+
     x, y = transform_point(x, y, primitive.scene_to_canonic)
+
+    print("Transformed (x,y): ", x, y)
 
     -- Triangle test -> skip if point is inside the triangle fully covered
     -- (or fully uncovered) by Bézier
     local point_diagonal = primitive.diagonal(x, y)
     if point_diagonal == -primitive.mid_point_diagonal then
+        print(">> triangle test")
         if point_diagonal < 0 then
             return primitive.dysign
         else
@@ -648,6 +655,7 @@ function sample_table.sample_path.quadratic_segment(primitive, x, y)
 
     -- Implicit test
     local eval = primitive.implicit(x, y)
+    print("Evaluation: ", eval)
 
     if eval < 0 then
         return primitive.dysign
