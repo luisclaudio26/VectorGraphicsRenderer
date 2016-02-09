@@ -29,8 +29,8 @@ local function transform_point(x, y, xf)
 end
 
 local function truncate_parameter(t)
-    if t < 0 or t == math.huge then t = 0 --????
-    elseif t > 1 or t == -math.huge then t = 1
+    if t < 0 or t == -math.huge then t = 0 --????
+    elseif t > 1 or t == math.huge then t = 1
     end
     return t
 end
@@ -67,6 +67,28 @@ local function compute_cubic_maxima(x0, x1, x2, x3)
     if n > 1 then out2 = t2/s2 end
 
     out1, out2 = truncate_parameter( out1 ), truncate_parameter( out2 )
+    return out1, out2
+end
+
+local function compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3)
+    local d2, d3, d4
+
+    d2 = 3*( x3*(2*y1 - y2 - y0) + x2*(2*y0 - 3*y1 + y3) + x0*(y1 - 2*y2 + y3) - x1*(y0 - 3*y2 + 2*y3) )
+    d3 = 3*( (3*x2 - x3)*(y0 - y1) - x1*(2*y0 - 3*y2 + y3) + x0*(2*y1 - 3*y2 + y3) )
+    d4 = 9*( x2*(y0 - y1) + x0*(y1 - y2) + x1*(y2 - y0) )
+
+    local a, b, c = -3*d2, 3*d3, -d4
+
+    local n, t1, s1, t2, s2 = quadratic.quadratic(a, b, c)
+    local out1, out2 = 0, 0
+
+    -- Other inflection is in infinity (which is consistent). Should it be
+    -- truncated to 1?
+    if n > 0 then out1 = t1/s1 end
+    if n > 1 then out2 = t2/s2 end
+
+    out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
+
     return out1, out2
 end
 
@@ -375,14 +397,16 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
     local x2, y2 = data[offset+4], data[offset+5]
     local x3, y3 = data[offset+6], data[offset+7]
 
-    -- Calculate maxima
+    -- Calculate maxima, double points and inflections
     local t = {}
-    t[1], t[6] = 0, 1
     t[2], t[3] = compute_cubic_maxima(x0, x1, x2, x3)
     t[4], t[5] = compute_cubic_maxima(y0, y1, y2, y3)
+    t[6], t[7] = compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3)
+    t[1], t[8] = 0, 1
+
     table.sort( t )
 
-    for i = 2, 6 do
+    for i = 2, #t do
         if t[i-1] ~= t[i] then
             u0, v0, u1, v1, u2, v2, u3, v3 = bezier.cut3(t[i-1], t[i], x0, y0, x1, y1, x2, y2, x3, y3)
             prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, primitives)
