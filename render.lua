@@ -312,8 +312,10 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
     u2, v2 = transform_point(u2, v2, trans)
     u3, v3 = transform_point(u3, v3, trans)
 
+    holder[n].scene_to_canonic = trans
+
     -- Triangle test: compute intersection of tangents
-    local inter_x = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2 (-v0 + v3)))
+    local inter_x = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2*(-v0 + v3)))
     inter_x = inter_x / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
 
     local inter_y = (u3*(v0 - v1)*v2 + u0*v1*v2 - u2*v0*v3 - u0*v1*v3 + u2*v1*v3 + u1*v0*(-v2 + v3))
@@ -325,40 +327,73 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
         imp_b = x0 - x1
         imp_c = -imp_a * x0 - imp_b * y0
 
-        local imp_sign = sign(imp_a)
-        return imp_a*imp_sign, imp_b*imp_sign, imp_c*imp_sign
+        return {imp_a, imp_b, imp_c}
     end
 
+    local p12 = compute_implicit_line(u0, v0, u3, v3)
+    local p23 = compute_implicit_line(u3, v3, inter_x, inter_y)
+    local p31 = compute_implicit_line(inter_x, inter_y, u0, v0)
+
     holder[n].inside_triangle = function(x, y)
-        
+        local eval1 = p12[1] * x + p12[2] * y + p12[3]
+        local eval2 = p23[1] * x + p23[2] * y + p23[3]
+        local eval3 = p31[1] * x + p31[2] * y + p31[3]
 
-
+        return (sign(eval1) == sign(eval2) and sign(eval2) == sign(eval3))
     end
 
     -- Compute implicit function (missing sign test, degenerate test)
-    local imp = function(x, y)
-        f1 = -(-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
-        f2 = (-3*u1*y + 3*x*v1)
-        f3 = (-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
-        f4 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2))
-        f5 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3))
-        f6 = (9*u2*v1 - 6*u3*v1 - 9*u1*y2 + 3*u3*y2 + 6*u1*v3 - 3*u2*v3)
-        f7 = -((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2))^2
-        f8 = (-3*u1*y + 3*x*v1)
-        f9 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*y2 + x*(3*v1 - 3*y2 + v3))
-        f10 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3)) 
-        f11 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2)) 
-        f12 = (-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
-        f13 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3)) 
-        f14 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*y2 + x*(3*v1 - 3*y2 + v3))
+    local det1 = xform.xform(u0,v0,1,u1,v1,1,u2,v2,1) : det()
+    local det2 = xform.xform(u1,v1,1,u2,v2,1,u3,v3,1) : det()
+    local imp
 
-        local eval = f1*(f2*f3 - f4*f5) + f6*(f7 + f8*f9) + f10*(f11*f12 - f13*f14)
+    if det1 ~= 0 and det2 ~= 0 then
 
-        return eval
+        local a1 = (v1 - v2 - v3)
+        local a2 = -(4*v1^2 - 2*v1*v2 + v2^2)*u3^2
+        local a3 = (9*v2^2 - 6*v2*v3 - 4*v3^2)*u1^2
+        local a4 = (9*v1^2 - 12*v1*v3 - v3^2)*u2^2
+        local a5 = 2*u1*u3*(-v2*(6*v2 + v3) + v1*(3*v2 + 4*v3))
+        local a6 = 2*u2*(u3*(3*v1^2 - v2*v3 + v1*(-6*v2 + v3)) + u1*(v1*(9*v2 - 3*v3) - v3*(6*v2 + v3)))
+        local imp_sign = a1*(a2+a3+a4+a5-a6)
+
+        imp = function(x, y)
+            f1 = -(-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
+            f2 = (-3*u1*y + 3*x*v1)
+            f3 = (-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
+            f4 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2))
+            f5 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3))
+            f6 = (9*u2*v1 - 6*u3*v1 - 9*u1*y2 + 3*u3*y2 + 6*u1*v3 - 3*u2*v3)
+            f7 = -((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2))^2
+            f8 = (-3*u1*y + 3*x*v1)
+            f9 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*y2 + x*(3*v1 - 3*y2 + v3))
+            f10 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3)) 
+            f11 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2)) 
+            f12 = (-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
+            f13 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3)) 
+            f14 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*y2 + x*(3*v1 - 3*y2 + v3))
+
+            local eval = f1*(f2*f3 - f4*f5) + f6*(f7 + f8*f9) + f10*(f11*f12 - f13*f14)
+
+            if imp_sign < 0 then eval = -eval end
+
+            return eval
+        end
+    else
+        local degenerate_cubic = compute_implicit_line(u0, v0, u3, v3)
+        local imp_sign = sign(v3-v0)
+        
+        imp = function(x, y)
+            return imp_sign * degenerate_cubic[1] * x
+                    + imp_sign * degenerate_cubic[2] * y
+                    + imp_sign * degenerate_cubic[3]
+        end
+
     end
 
+    holder[n].implicit = imp
 
-
+    -- Store transformed control points
     holder[n].x0, holder[n].y0 = u0, v0
     holder[n].x1, holder[n].y1 = u1, v1
     holder[n].x2, holder[n].y2 = u2, v2
