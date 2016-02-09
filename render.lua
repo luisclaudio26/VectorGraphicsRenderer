@@ -305,22 +305,52 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
     holder[n].xmax, holder[n].xmin = max(u0, u3), min(u0, u3)
     holder[n].ymax, holder[n].ymin = max(v0, v3), min(v0, v3)
 
+    -- Translate first control point to the origin
+    local trans = xform.translate(-u0, -v0)
+    u0, v0 = transform_point(u0, v0, trans)
+    u1, v1 = transform_point(u1, v1, trans)
+    u2, v2 = transform_point(u2, v2, trans)
+    u3, v3 = transform_point(u3, v3, trans)
+
+    -- Triangle test: compute intersection of tangents
+    local inter_x = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2 (-v0 + v3)))
+    inter_x = inter_x / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
+
+    local inter_y = (u3*(v0 - v1)*v2 + u0*v1*v2 - u2*v0*v3 - u0*v1*v3 + u2*v1*v3 + u1*v0*(-v2 + v3))
+    inter_y = inter_y / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
+
+    local compute_implicit_line = function(x0, y0, x1, y1)
+        local imp_a, imp_b, imp_c
+        imp_a = y1 - y0
+        imp_b = x0 - x1
+        imp_c = -imp_a * x0 - imp_b * y0
+
+        local imp_sign = sign(imp_a)
+        return imp_a*imp_sign, imp_b*imp_sign, imp_c*imp_sign
+    end
+
+    holder[n].inside_triangle = function(x, y)
+        
+
+
+    end
+
     -- Compute implicit function (missing sign test, degenerate test)
     local imp = function(x, y)
-        f1 = -(-9*x2*y1 + 3*x3*y1 + 9*x1*y2 - 3*x1*y3)
-        f2 = (-3*x1*y + 3*x*y1)
-        f3 = (-9*x2*y1 + 3*x3*y1 + 9*x1*y2 - 3*x1*y3)
-        f4 = ((6*x1 - 3*x2)*y + x*(-6*y1 + 3*y2))
-        f5 = ((-3*x1 + 3*x2 - x3)*y + x*(3*y1 - 3*y2 + y3))
-        f6 = (9*x2*y1 - 6*x3*y1 - 9*x1*y2 + 3*x3*y2 + 6*x1*y3 - 3*x2*y3)
-        f7 = -((6*x1 - 3*x2)*y + x*(-6*y1 + 3*y2))^2
-        f8 = (-3*x1*y + 3*x*y1)
-        f9 = ((-3*x1 + 3*x2 - x3)*y + 9*x2*y1 - 9*x1*y2 + x*(3*y1 - 3*y2 + y3))
-        f10 = ((-3*x1 + 3*x2 - x3)*y + x*(3*y1 - 3*y2 + y3)) 
-        f11 = ((6*x1 - 3*x2)*y + x*(-6*y1 + 3*y2)) 
-        f12 = (-9*x2*y1 + 3*x3*y1 + 9*x1*y2 - 3*x1*y3)
-        f13 = ((-3*x1 + 3*x2 - x3)*y + x*(3*y1 - 3*y2 + y3)) 
-        f14 = ((-3*x1 + 3*x2 - x3)*y + 9*x2*y1 - 9*x1*y2 + x*(3*y1 - 3*y2 + y3))
+        f1 = -(-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
+        f2 = (-3*u1*y + 3*x*v1)
+        f3 = (-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
+        f4 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2))
+        f5 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3))
+        f6 = (9*u2*v1 - 6*u3*v1 - 9*u1*y2 + 3*u3*y2 + 6*u1*v3 - 3*u2*v3)
+        f7 = -((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2))^2
+        f8 = (-3*u1*y + 3*x*v1)
+        f9 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*y2 + x*(3*v1 - 3*y2 + v3))
+        f10 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3)) 
+        f11 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2)) 
+        f12 = (-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
+        f13 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3)) 
+        f14 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*y2 + x*(3*v1 - 3*y2 + v3))
 
         local eval = f1*(f2*f3 - f4*f5) + f6*(f7 + f8*f9) + f10*(f11*f12 - f13*f14)
 
