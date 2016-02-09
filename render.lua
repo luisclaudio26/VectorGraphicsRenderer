@@ -106,8 +106,6 @@ local function compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3)
     if n > 0 then out1 = t1/s1 end
     if n > 1 then out2 = t2/s2 end
 
-    print(out1, out2)
-
     out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
 
     return out1, out2
@@ -297,20 +295,45 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
 end
 
 function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, holder)
+    
+    -- Header
     local n = #holder + 1
     holder[n] = {}
     holder[n].type = "cubic_segment"
+
+    -- Untransformed bounding box
+    holder[n].xmax, holder[n].xmin = max(u0, u3), min(u0, u3)
+    holder[n].ymax, holder[n].ymin = max(v0, v3), min(v0, v3)
+
+    -- Compute implicit function (missing sign test, degenerate test)
+    local imp = function(x, y)
+        f1 = -(-9*x2*y1 + 3*x3*y1 + 9*x1*y2 - 3*x1*y3)
+        f2 = (-3*x1*y + 3*x*y1)
+        f3 = (-9*x2*y1 + 3*x3*y1 + 9*x1*y2 - 3*x1*y3)
+        f4 = ((6*x1 - 3*x2)*y + x*(-6*y1 + 3*y2))
+        f5 = ((-3*x1 + 3*x2 - x3)*y + x*(3*y1 - 3*y2 + y3))
+        f6 = (9*x2*y1 - 6*x3*y1 - 9*x1*y2 + 3*x3*y2 + 6*x1*y3 - 3*x2*y3)
+        f7 = -((6*x1 - 3*x2)*y + x*(-6*y1 + 3*y2))^2
+        f8 = (-3*x1*y + 3*x*y1)
+        f9 = ((-3*x1 + 3*x2 - x3)*y + 9*x2*y1 - 9*x1*y2 + x*(3*y1 - 3*y2 + y3))
+        f10 = ((-3*x1 + 3*x2 - x3)*y + x*(3*y1 - 3*y2 + y3)) 
+        f11 = ((6*x1 - 3*x2)*y + x*(-6*y1 + 3*y2)) 
+        f12 = (-9*x2*y1 + 3*x3*y1 + 9*x1*y2 - 3*x1*y3)
+        f13 = ((-3*x1 + 3*x2 - x3)*y + x*(3*y1 - 3*y2 + y3)) 
+        f14 = ((-3*x1 + 3*x2 - x3)*y + 9*x2*y1 - 9*x1*y2 + x*(3*y1 - 3*y2 + y3))
+
+        local eval = f1*(f2*f3 - f4*f5) + f6*(f7 + f8*f9) + f10*(f11*f12 - f13*f14)
+
+        return eval
+    end
+
+
+
     holder[n].x0, holder[n].y0 = u0, v0
     holder[n].x1, holder[n].y1 = u1, v1
     holder[n].x2, holder[n].y2 = u2, v2
     holder[n].x3, holder[n].y3 = u3, v3
     holder[n].dysign = sign(v3 - v0)
-
-    local xmax, xmin = max(u0, u3), min(u0, u3)
-    local ymax, ymin = max(v0, v3), min(v0, v3)
-
-    holder[n].xmax, holder[n].xmin = xmax, xmin
-    holder[n].ymax, holder[n].ymin = ymax, ymin
 end
 
 function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1, u2, v2, w, holder)
