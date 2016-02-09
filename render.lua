@@ -372,20 +372,20 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
         local imp_sign = a1*(a2+a3+a4+a5-a6)
 
         imp = function(x, y)
-            f1 = -(-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
+            f1 = -(-9*u2*v1 + 3*u3*v1 + 9*u1*v2 - 3*u1*v3)
             f2 = (-3*u1*y + 3*x*v1)
-            f3 = (-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
-            f4 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2))
-            f5 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3))
-            f6 = (9*u2*v1 - 6*u3*v1 - 9*u1*y2 + 3*u3*y2 + 6*u1*v3 - 3*u2*v3)
-            f7 = -((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2))^2
+            f3 = (-9*u2*v1 + 3*u3*v1 + 9*u1*v2 - 3*u1*v3)
+            f4 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*v2))
+            f5 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*v2 + v3))
+            f6 = (9*u2*v1 - 6*u3*v1 - 9*u1*v2 + 3*u3*v2 + 6*u1*v3 - 3*u2*v3)
+            f7 = -((6*u1 - 3*u2)*y + x*(-6*v1 + 3*v2))^2
             f8 = (-3*u1*y + 3*x*v1)
-            f9 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*y2 + x*(3*v1 - 3*y2 + v3))
-            f10 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3)) 
-            f11 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*y2)) 
-            f12 = (-9*u2*v1 + 3*u3*v1 + 9*u1*y2 - 3*u1*v3)
-            f13 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*y2 + v3)) 
-            f14 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*y2 + x*(3*v1 - 3*y2 + v3))
+            f9 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*v2 + x*(3*v1 - 3*v2 + v3))
+            f10 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*v2 + v3)) 
+            f11 = ((6*u1 - 3*u2)*y + x*(-6*v1 + 3*v2)) 
+            f12 = (-9*u2*v1 + 3*u3*v1 + 9*u1*v2 - 3*u1*v3)
+            f13 = ((-3*u1 + 3*u2 - u3)*y + x*(3*v1 - 3*v2 + v3)) 
+            f14 = ((-3*u1 + 3*u2 - u3)*y + 9*u2*v1 - 9*u1*v2 + x*(3*v1 - 3*v2 + v3))
 
             local eval = f1*(f2*f3 - f4*f5) + f6*(f7 + f8*f9) + f10*(f11*f12 - f13*f14)
 
@@ -823,23 +823,15 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
     -- Second triangle test: if point is outside it, return 0 or dysign
     -- depending whether point is to the left or to the reight to the curve;
     -- otherwise, evaluate implicitly
-    if not primitive.inside_triangle(x, y) then
-       if point_diagonal < 0 then return primitive.dysign
+    if primitive.inside_triangle(x, y) == false then
+        if point_diagonal < 0 then return primitive.dysign
         else return 0 end 
     else
         local eval = primitive.implicit(x, y)
         
-        if eval < 0 then return primitive.dysign
+        if eval > 0 then return primitive.dysign
         end return 0
     end
-
-    -- Compute intersection
-    --[[
-    t_ = root_bisection(0, 1, function(t) return y0*(1-t)^3 + 3*(1-t)^2*t*y1 + 3*(1-t)*t^2*y2 + t^3*y3 - y end )
-    x_ = x0*(1-t_)^3 + 3*(1-t_)^2*t_*x1 + 3*(1-t_)*t_^2*x2 + t_^3*x3
-
-    if x < x_ then return primitive.dysign
-    else return 0 end ]]
 end
 
 function sample_table.sample_path.rational_segment(primitive, x, y)
