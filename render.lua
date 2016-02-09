@@ -314,6 +314,20 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
 
     holder[n].scene_to_canonic = trans
 
+    -- Triangle test: compute the diagonal cutting
+    -- the bounding box in two triangles
+    local diag_a = v3 - v0
+    local diag_b = u0 - u3
+    local diag_c = -diag_a * u0 - diag_b * v0
+    local diag_sign = sign(diag_a)
+    diag_a, diag_b, diag_c = diag_a*diag_sign, diag_b*diag_sign, diag_c*diag_sign
+
+    holder[n].diagonal = function(x, y)
+        return sign( diag_a*x + diag_b*y + diag_c )
+    end
+
+    holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at3(0.5, u0, v0, u1, v1, u2, v2, u3, v3) )
+
     -- Triangle test: compute intersection of tangents
     local inter_x = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2*(-v0 + v3)))
     inter_x = inter_x / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
@@ -791,17 +805,41 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
     if x > primitive.xmax then return 0 end
     if x <= primitive.xmin then return primitive.dysign end
 
+    x, y = transform_point(x, y, primitive.scene_to_canonic)
+
     local x0, y0 = primitive.x0, primitive.y0
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
     local x3, y3 = primitive.x3, primitive.y3
 
+    -- First triangle test: skip if point is inside the triangle fully
+    -- covered (or fully uncovered) by Bézier
+    local point_diagonal = primitive.diagonal(x, y)
+    if point_diagonal == -primitive.mid_point_diagonal then
+        if point_diagonal < 0 then return primitive.dysign
+        else return 0 end
+    end
+
+    -- Second triangle test: if point is outside it, return 0 or dysign
+    -- depending whether point is to the left or to the reight to the curve;
+    -- otherwise, evaluate implicitly
+    if not primitive.inside_triangle(x, y) then
+       if point_diagonal < 0 then return primitive.dysign
+        else return 0 end 
+    else
+        local eval = primitive.implicit(x, y)
+        
+        if eval < 0 then return primitive.dysign
+        end return 0
+    end
+
     -- Compute intersection
+    --[[
     t_ = root_bisection(0, 1, function(t) return y0*(1-t)^3 + 3*(1-t)^2*t*y1 + 3*(1-t)*t^2*y2 + t^3*y3 - y end )
     x_ = x0*(1-t_)^3 + 3*(1-t_)^2*t_*x1 + 3*(1-t_)*t_^2*x2 + t_^3*x3
 
     if x < x_ then return primitive.dysign
-    else return 0 end
+    else return 0 end ]]
 end
 
 function sample_table.sample_path.rational_segment(primitive, x, y)
