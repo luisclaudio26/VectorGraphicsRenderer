@@ -92,6 +92,27 @@ local function compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3)
     return out1, out2
 end
 
+local function compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3)
+    local d2, d3, d4
+
+    d2 = 3*( x3*(2*y1 - y2 - y0) + x2*(2*y0 - 3*y1 + y3) + x0*(y1 - 2*y2 + y3) - x1*(y0 - 3*y2 + 2*y3) )
+    d3 = 3*( (3*x2 - x3)*(y0 - y1) - x1*(2*y0 - 3*y2 + y3) + x0*(2*y1 - 3*y2 + y3) )
+    d4 = 9*( x2*(y0 - y1) + x0*(y1 - y2) + x1*(y2 - y0) )
+
+    local a, b, c =  d2^2, -d2*d3, d3^2 - d2*d4
+    local n, t1, s1, t2, s2 = quadratic.quadratic(a, b, c)
+    local out1, out2 = 0, 0
+
+    if n > 0 then out1 = t1/s1 end
+    if n > 1 then out2 = t2/s2 end
+
+    print(out1, out2)
+
+    out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
+
+    return out1, out2
+end
+
 local function compute_rational_maxima(x0, x1, x2, w)
     local a = 2*(-1 + w)*(x0 - x2)
     local b = 2*(x0 - 2*w*x0 + 2*x1 - x2)
@@ -402,7 +423,8 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
     t[2], t[3] = compute_cubic_maxima(x0, x1, x2, x3)
     t[4], t[5] = compute_cubic_maxima(y0, y1, y2, y3)
     t[6], t[7] = compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3)
-    t[1], t[8] = 0, 1
+    t[8], t[9] = compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3) 
+    t[1], t[10] = 0, 1
 
     table.sort( t )
 
