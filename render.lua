@@ -89,6 +89,8 @@ local function compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3)
 
     out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
 
+    print("Inflections: ", out1, out2)
+
     return out1, out2
 end
 
@@ -106,7 +108,12 @@ local function compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3)
     if n > 0 then out1 = t1/s1 end
     if n > 1 then out2 = t2/s2 end
 
+    print("Quadratic param: ", a, b, c)
+    print("Roots: ", n, t1, s1, t2, s2)
+
     out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
+
+    print("Double points: ", out1, out2)
 
     return out1, out2
 end
@@ -162,6 +169,43 @@ local function fix_ramp(ramp)
         table.insert(ramp, 1) -- Insert offset
         table.insert(ramp, v) -- Insert value
     end
+end
+
+
+local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diagonal)
+    -- We assume the curve to be MONOTONIC
+
+    local outx, outy
+
+
+    if u1 == u2 and v1 == v2 then
+        -- First case: control points are coincident. Just return it
+        return u1, v1
+    else if u0 == u1 and v0 == v1 then
+        -- Second case: first point coincide with the second. Intersection
+        -- will be then between line (u2,v2) -> (u3,v3) and x/y axis (if p2 is
+        -- to the right/left of the diagonal linking p0 -> p3)
+        local diag = diagonal(u2,v2)
+
+        if diag < 0 then --Left case
+            outx = u0
+            outy = (v2-v3)*(u0-u3)/(u2-u3) + v3
+        else
+            outx = (v0-v3)*(u2-u3)/(v2-v3) + u3
+            outy = v0
+        end
+    else if u2 == u3 and v2 == v3 then
+        -- Third case: analogous to the second
+    else
+        -- Fourth case: All points are different
+        outx = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2*(-v0 + v3)))
+        outx = outx / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
+
+        outy = (u3*(v0 - v1)*v2 + u0*v1*v2 - u2*v0*v3 - u0*v1*v3 + u2*v1*v3 + u1*v0*(-v2 + v3))
+        outy = outy / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
+    end
+
+    return outx, outy
 end
 
 -----------------------------------------------------------------------------------------
@@ -307,6 +351,10 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
 
     -- Translate first control point to the origin
     local trans = xform.translate(-u0, -v0)
+
+        print(u0, v0, u1, v1, u2, v2, u3, v3)
+
+
     u0, v0 = transform_point(u0, v0, trans)
     u1, v1 = transform_point(u1, v1, trans)
     u2, v2 = transform_point(u2, v2, trans)
@@ -329,11 +377,7 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
     holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at3(0.5, u0, v0, u1, v1, u2, v2, u3, v3) )
 
     -- Triangle test: compute intersection of tangents
-    local inter_x = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2*(-v0 + v3)))
-    inter_x = inter_x / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
-
-    local inter_y = (u3*(v0 - v1)*v2 + u0*v1*v2 - u2*v0*v3 - u0*v1*v3 + u2*v1*v3 + u1*v0*(-v2 + v3))
-    inter_y = inter_y / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
+    local inter_x, inter_y = compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, holder[n].diagonal)
 
     local compute_implicit_line = function(x0, y0, x1, y1)
         local imp_a, imp_b, imp_c
@@ -348,6 +392,8 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
     local p23 = compute_implicit_line(u3, v3, inter_x, inter_y)
     local p31 = compute_implicit_line(inter_x, inter_y, u0, v0)
 
+    print("Triangle: ", u0, v0, u3, v3, inter_x, inter_y)
+
     holder[n].inside_triangle = function(x, y)
         local eval1 = p12[1] * x + p12[2] * y + p12[3]
         local eval2 = p23[1] * x + p23[2] * y + p23[3]
@@ -359,9 +405,10 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
     -- Compute implicit function (missing sign test, degenerate test)
     local det1 = xform.xform(u0,v0,1,u1,v1,1,u2,v2,1) : det()
     local det2 = xform.xform(u1,v1,1,u2,v2,1,u3,v3,1) : det()
+
     local imp
 
-    if det1 ~= 0 and det2 ~= 0 then
+    if det1 ~= 0 or det2 ~= 0 then
 
         local a1 = (v1 - v2 - v3)
         local a2 = -(4*v1^2 - 2*v1*v2 + v2^2)*u3^2
@@ -369,7 +416,11 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
         local a4 = (9*v1^2 - 12*v1*v3 - v3^2)*u2^2
         local a5 = 2*u1*u3*(-v2*(6*v2 + v3) + v1*(3*v2 + 4*v3))
         local a6 = 2*u2*(u3*(3*v1^2 - v2*v3 + v1*(-6*v2 + v3)) + u1*(v1*(9*v2 - 3*v3) - v3*(6*v2 + v3)))
-        local imp_sign = a1*(a2+a3+a4+a5-a6)
+        local imp_sign = sign( a1*(a2+a3+a4+a5-a6) )
+
+        --print(u1, u2, u3, v1, v2, v3)
+        print("Imp sign factors: ", a1, a2, a3, a4, a5, a6, imp_sign)
+        print("----------------------")
 
         imp = function(x, y)
             f1 = -(-9*u2*v1 + 3*u3*v1 + 9*u1*v2 - 3*u1*v3)
@@ -389,7 +440,7 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
 
             local eval = f1*(f2*f3 - f4*f5) + f6*(f7 + f8*f9) + f10*(f11*f12 - f13*f14)
 
-            if imp_sign < 0 then eval = -eval end
+            eval = eval * imp_sign
 
             return eval
         end
@@ -533,6 +584,8 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
     for i = 2, #t do
         if t[i-1] ~= t[i] then
             u0, v0, u1, v1, u2, v2, u3, v3 = bezier.cut3(t[i-1], t[i], x0, y0, x1, y1, x2, y2, x3, y3)
+            print(t[i-1], t[i], " -> ", u0, v0, u1, v1, u2, v2, u3, v3)
+
             prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, primitives)
         end
     end
@@ -805,7 +858,9 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
     if x > primitive.xmax then return 0 end
     if x <= primitive.xmin then return primitive.dysign end
 
+    print("Untransformed x, y: ", x, y)
     x, y = transform_point(x, y, primitive.scene_to_canonic)
+    print("Transformed x, y: ", x, y)
 
     local x0, y0 = primitive.x0, primitive.y0
     local x1, y1 = primitive.x1, primitive.y1
@@ -815,7 +870,12 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
     -- First triangle test: skip if point is inside the triangle fully
     -- covered (or fully uncovered) by Bézier
     local point_diagonal = primitive.diagonal(x, y)
+    
+    print("Point diagonal: ", point_diagonal)
+    
     if point_diagonal == -primitive.mid_point_diagonal then
+        print("Skip through diagonal test: ", primitive.mid_point_diagonal)
+        print("----------------")
         if point_diagonal < 0 then return primitive.dysign
         else return 0 end
     end
@@ -824,12 +884,17 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
     -- depending whether point is to the left or to the reight to the curve;
     -- otherwise, evaluate implicitly
     if primitive.inside_triangle(x, y) == false then
+        print("Outside triangle. Skipping")
+        print("----------------------------")
+
         if point_diagonal < 0 then return primitive.dysign
-        else return 0 end 
+        else return 0 end
     else
         local eval = primitive.implicit(x, y)
-        
-        if eval > 0 then return primitive.dysign
+
+        print("Evaluating implicit: ", eval)
+
+        if eval >= 0 then return primitive.dysign
         end return 0
     end
 end
