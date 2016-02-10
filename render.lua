@@ -175,7 +175,8 @@ end
 local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diagonal)
     -- We assume the curve to be MONOTONIC
 
-    if u3 > u0 then
+    if u0 > u3 then
+        print("Swapped")
         -- Thanks Lua for making this possible
         u0, v0, u3, v3 = u3, v3, u0, v0
         u1, v1, u2, v2 = u2, v2, u1, v1
@@ -185,12 +186,15 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
 
     if u1 == u2 and v1 == v2 then
         -- First case: control points are coincident. Just return it
+        print("First case")
         return u1, v1
     elseif u0 == u1 and v0 == v1 then
         -- Second case: first point coincide with the second. Intersection
         -- will be then between line (u2,v2) -> (u3,v3) and x/y axis (if p2 is
         -- to the right/left of the diagonal linking p0 -> p3)
         local diag = diagonal(u2,v2)
+
+        print("Second case")
 
         if diag < 0 then --Left case
             outx = u0
@@ -203,6 +207,8 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
         -- Third case: dual to the second
         local diag = diagonal(u1,v1)
 
+        print("Third case")
+
         if diag < 0 then -- Left
             outx = (v3-v0)*(u1-u0)/(v1-v0) + u0
             outy = v3
@@ -211,6 +217,9 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
             outy = (v1-v0)*(u3-u0)/(u1-u0) + v0
         end
     else
+
+        print("Fourth case")
+
         -- Fourth case: All points are different
         outx = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2*(-v0 + v3)))
         outx = outx / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
@@ -366,7 +375,7 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
     -- Translate first control point to the origin
     local trans = xform.translate(-u0, -v0)
 
-        print(u0, v0, u1, v1, u2, v2, u3, v3)
+    print(u0, v0, u1, v1, u2, v2, u3, v3)
 
 
     u0, v0 = transform_point(u0, v0, trans)
@@ -432,7 +441,7 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
         local a6 = 2*u2*(u3*(3*v1^2 - v2*v3 + v1*(-6*v2 + v3)) + u1*(v1*(9*v2 - 3*v3) - v3*(6*v2 + v3)))
         local imp_sign = sign( a1*(a2+a3+a4+a5-a6) )
 
-        --print(u1, u2, u3, v1, v2, v3)
+        print(u1, u2, u3, v1, v2, v3)
         print("Imp sign factors: ", a1, a2, a3, a4, a5, a6, imp_sign)
         print("----------------------")
 
@@ -907,8 +916,9 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
         local eval = primitive.implicit(x, y)
 
         print("Evaluating implicit: ", eval)
+        print("--------------------------")
 
-        if eval >= 0 then return primitive.dysign
+        if eval > 0 then return primitive.dysign
         end return 0
     end
 end
