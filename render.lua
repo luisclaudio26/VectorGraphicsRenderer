@@ -175,8 +175,13 @@ end
 local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diagonal)
     -- We assume the curve to be MONOTONIC
 
-    local outx, outy
+    if u3 > u0 then
+        
+        u0, v0, u1, v1, u2, v2, u3, v3
 
+
+
+    local outx, outy
 
     if u1 == u2 and v1 == v2 then
         -- First case: control points are coincident. Just return it
@@ -195,7 +200,16 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
             outy = v0
         end
     else if u2 == u3 and v2 == v3 then
-        -- Third case: analogous to the second
+        -- Third case: dual to the second
+        local diag = diagonal(u1,v1)
+
+        if diag < 0 then -- Left
+            outx = (v3-v0)*(u1-u0)/(v1-v0) + u0
+            outy = v3
+        else
+            outx = u3
+            outy = (v1-v0)*(u3-u0)/(u1-u0) + v0
+        end
     else
         -- Fourth case: All points are different
         outx = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2*(-v0 + v3)))
