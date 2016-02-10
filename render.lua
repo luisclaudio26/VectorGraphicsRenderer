@@ -176,17 +176,17 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
     -- We assume the curve to be MONOTONIC
 
     if u3 > u0 then
-        
-        u0, v0, u1, v1, u2, v2, u3, v3
-
-
+        -- Thanks Lua for making this possible
+        u0, v0, u3, v3 = u3, v3, u0, v0
+        u1, v1, u2, v2 = u2, v2, u1, v1
+    end
 
     local outx, outy
 
     if u1 == u2 and v1 == v2 then
         -- First case: control points are coincident. Just return it
         return u1, v1
-    else if u0 == u1 and v0 == v1 then
+    elseif u0 == u1 and v0 == v1 then
         -- Second case: first point coincide with the second. Intersection
         -- will be then between line (u2,v2) -> (u3,v3) and x/y axis (if p2 is
         -- to the right/left of the diagonal linking p0 -> p3)
@@ -199,7 +199,7 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
             outx = (v0-v3)*(u2-u3)/(v2-v3) + u3
             outy = v0
         end
-    else if u2 == u3 and v2 == v3 then
+    elseif u2 == u3 and v2 == v3 then
         -- Third case: dual to the second
         local diag = diagonal(u1,v1)
 
