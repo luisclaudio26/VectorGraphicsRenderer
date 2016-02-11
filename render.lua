@@ -78,8 +78,8 @@ local function compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3, d2, d3,
 
     -- Other inflection is in infinity (which is consistent). Should it be
     -- truncated to 1?
-    if n > 0 then out1 = t1/s1 end
-    if n > 1 then out2 = t2/s2 end
+    if n > 0 and s1 ~= 0 then out1 = t1/s1 end
+    if n > 1 and s2 ~= 0 then out2 = t2/s2 end
 
     print("Quadratic param: ", a, b, c)
     print("Roots: ", n, t1, s1, t2, s2)
@@ -581,6 +581,11 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
     local d2 = 3*( x3*(2*y1 - y2 - y0) + x2*(2*y0 - 3*y1 + y3) + x0*(y1 - 2*y2 + y3) - x1*(y0 - 3*y2 + 2*y3) )
     local d3 = 3*( (3*x2 - x3)*(y0 - y1) - x1*(2*y0 - 3*y2 + y3) + x0*(2*y1 - 3*y2 + y3) )
     local d4 = 9*( x2*(y0 - y1) + x0*(y1 - y2) + x1*(y2 - y0) )
+
+    -- Watchout for degenerated cubics!
+    if math.abs(d4) < epsilon then
+        print("DEGENERATED")
+    end
 
     -- Calculate maxima, double points and inflections
     local t = {}
