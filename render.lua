@@ -943,8 +943,16 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
         print("Outside triangle. Skipping")
         print("----------------------------")
 
-        if point_diagonal < 0 then return primitive.dysign
-        else return 0 end
+        if point_diagonal < 0 then 
+            return primitive.dysign
+        elseif point_diagonal > 0 then
+            return 0 
+        else
+            -- Point is exactly on the diagonal. In this case, we return 0 or +-1
+            -- depending on the position of point t = 0.5
+            if primitive.mid_point_diagonal > 0 then return primitive.dysign
+            else return 0 end
+        end
     else
         local eval = primitive.implicit(x, y)
 
