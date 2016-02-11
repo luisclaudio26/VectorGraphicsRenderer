@@ -81,13 +81,7 @@ local function compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3, d2, d3,
     if n > 0 and s1 ~= 0 then out1 = t1/s1 end
     if n > 1 and s2 ~= 0 then out2 = t2/s2 end
 
-    print("Quadratic param: ", a, b, c)
-    print("Roots: ", n, t1, s1, t2, s2)
-
     out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
-
-    print("Inflections: ", out1, out2)
-    print("------------------------------")
 
     return out1, out2
 end
@@ -100,13 +94,7 @@ local function compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3, d2, d3,
     if n > 0 and s1 ~= 0 then out1 = t1/s1 end
     if n > 1 and s2 ~= 0 then out2 = t2/s2 end
 
-    print("Quadratic param: ", a, b, c)
-    print("Roots: ", n, t1, s1, t2, s2)
-
     out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
-
-    print("Double points: ", out1, out2)
-    print("----------------------------------")
 
     return out1, out2
 end
@@ -169,7 +157,6 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
     -- We assume the curve to be MONOTONIC
 
     if u0 > u3 then
-        print("Swapped")
         -- Thanks Lua for making this possible
         u0, v0, u3, v3 = u3, v3, u0, v0
         u1, v1, u2, v2 = u2, v2, u1, v1
@@ -179,30 +166,20 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
 
     if u1 == u2 and v1 == v2 then
         -- First case: control points are coincident. Just return it
-        print("First case")
         return u1, v1
     elseif u0 == u1 and v0 == v1 then
         -- Second case: first point coincide with the second. Intersection
         -- will be then between line (u2,v2) -> (u3,v3) and x/y axis (if p2 is
         -- to the right/left of the diagonal linking p0 -> p3)
         local diag = diagonal(u2,v2)
-
-        print("Second case")
-
         outx = u2
         outy = v2
     elseif u2 == u3 and v2 == v3 then
         -- Third case: dual to the second
         local diag = diagonal(u1,v1)
-
-        print("Third case")
-
         outx = u1
         outy = v1
     else
-
-        print("Fourth case")
-
         -- Fourth case: All points are different - intersection of tangents
         outx = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2*(-v0 + v3)))
         outx = outx / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
@@ -358,9 +335,6 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
     -- Translate first control point to the origin
     local trans = xform.translate(-u0, -v0)
 
-    print(u0, v0, u1, v1, u2, v2, u3, v3)
-
-
     u0, v0 = transform_point(u0, v0, trans)
     u1, v1 = transform_point(u1, v1, trans)
     u2, v2 = transform_point(u2, v2, trans)
@@ -417,10 +391,6 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
         local a6 = 2*u2*(u3*(3*v1^2 - v2*v3 + v1*(-6*v2 + v3)) + u1*(v1*(9*v2 - 3*v3) - v3*(6*v2 + v3)))
         local imp_sign = sign( a1*(a2+a3+a4+a5-a6) )
 
-        print(u1, u2, u3, v1, v2, v3)
-        print("Imp sign factors: ", a1, a2, a3, a4, a5, a6, imp_sign)
-        print("----------------------")
-
         imp = function(x, y)
             f1 = -(-9*u2*v1 + 3*u3*v1 + 9*u1*v2 - 3*u1*v3)
             f2 = (-3*u1*y + 3*x*v1)
@@ -444,14 +414,18 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
             return eval
         end
     else
-        print("USANDO CASO DEGENERADO")
-        local degenerate_cubic = compute_implicit_line(u0, v0, u3, v3)
-        local imp_sign = sign(v3-v0)
+        -- Seems like it is possible to cut a non-degenerate cubic in a way that
+        -- the segment is degenerated. Is there a better way to solve this (instead
+        -- of repeating code) ?
+        local a = v3 - v0
+        local b = u0 - u3
+        local c = -a * u0 - b * v0
+        local imp_sign = sign(a)
+
+        a, b, c = a*imp_sign, b*imp_sign, c*imp_sign
         
         imp = function(x, y)
-            return imp_sign * degenerate_cubic[1] * x
-                    + imp_sign * degenerate_cubic[2] * y
-                    + imp_sign * degenerate_cubic[3]
+            return a*x + b*y + c
         end
 
     end
@@ -578,15 +552,8 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
 
     -- Watchout for degenerated cubics! (What about degenerating into a point?
     -- just ignoring it for a while)
-    
-    print(d2, d3, d4)
     if d2 == 0 and d3 == 0 then
-        
-        print("DEGENERATED")
-
         if d4 ~= 0 then
-            print("PUSHING QUADRATIC INSTEAD")
-
             -- Cubic degenerates into a quadratic (this code chunk should be
             -- merged with the one in push_quadratic_segment after)
 
@@ -619,10 +586,7 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
 
         else
             -- Cubic degenerates into a line
-            print("PUSHING LINE INSTEAD")
-
             prepare_table.push_functions.linear_segment(x0, y0, x3, y3, shape.primitives, true)
-
             return
         end
     end
@@ -640,8 +604,6 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
     for i = 2, #t do
         if t[i-1] ~= t[i] then
             u0, v0, u1, v1, u2, v2, u3, v3 = bezier.cut3(t[i-1], t[i], x0, y0, x1, y1, x2, y2, x3, y3)
-            print(t[i-1], t[i], " -> ", u0, v0, u1, v1, u2, v2, u3, v3)
-
             prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, v3, primitives)
         end
     end
@@ -914,9 +876,7 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
     if x > primitive.xmax then return 0 end
     if x <= primitive.xmin then return primitive.dysign end
 
-    print("Untransformed x, y: ", x, y)
     x, y = transform_point(x, y, primitive.scene_to_canonic)
-    print("Transformed x, y: ", x, y)
 
     local x0, y0 = primitive.x0, primitive.y0
     local x1, y1 = primitive.x1, primitive.y1
@@ -927,11 +887,7 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
     -- covered (or fully uncovered) by Bézier
     local point_diagonal = primitive.diagonal(x, y)
     
-    print("Point diagonal: ", point_diagonal)
-    
     if point_diagonal == -primitive.mid_point_diagonal then
-        print("Skip through diagonal test: ", primitive.mid_point_diagonal)
-        print("----------------")
         if point_diagonal < 0 then return primitive.dysign
         else return 0 end
     end
@@ -940,9 +896,6 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
     -- depending whether point is to the left or to the reight to the curve;
     -- otherwise, evaluate implicitly
     if primitive.inside_triangle(x, y) == false then
-        print("Outside triangle. Skipping")
-        print("----------------------------")
-
         if point_diagonal < 0 then 
             return primitive.dysign
         elseif point_diagonal > 0 then
@@ -955,10 +908,6 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
         end
     else
         local eval = primitive.implicit(x, y)
-
-        print("Evaluating implicit: ", eval)
-        print("--------------------------")
-
         if eval > 0 then return primitive.dysign
         end return 0
     end
