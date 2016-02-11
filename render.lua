@@ -70,13 +70,7 @@ local function compute_cubic_maxima(x0, x1, x2, x3)
     return out1, out2
 end
 
-local function compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3)
-    local d2, d3, d4
-
-    d2 = 3*( x3*(2*y1 - y2 - y0) + x2*(2*y0 - 3*y1 + y3) + x0*(y1 - 2*y2 + y3) - x1*(y0 - 3*y2 + 2*y3) )
-    d3 = 3*( (3*x2 - x3)*(y0 - y1) - x1*(2*y0 - 3*y2 + y3) + x0*(2*y1 - 3*y2 + y3) )
-    d4 = 9*( x2*(y0 - y1) + x0*(y1 - y2) + x1*(y2 - y0) )
-
+local function compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3, d2, d3, d4)
     local a, b, c = -3*d2, 3*d3, -d4
 
     local n, t1, s1, t2, s2 = quadratic.quadratic(a, b, c)
@@ -87,26 +81,24 @@ local function compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3)
     if n > 0 then out1 = t1/s1 end
     if n > 1 then out2 = t2/s2 end
 
+    print("Quadratic param: ", a, b, c)
+    print("Roots: ", n, t1, s1, t2, s2)
+
     out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
 
     print("Inflections: ", out1, out2)
+    print("------------------------------")
 
     return out1, out2
 end
 
-local function compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3)
-    local d2, d3, d4
-
-    d2 = 3*( x3*(2*y1 - y2 - y0) + x2*(2*y0 - 3*y1 + y3) + x0*(y1 - 2*y2 + y3) - x1*(y0 - 3*y2 + 2*y3) )
-    d3 = 3*( (3*x2 - x3)*(y0 - y1) - x1*(2*y0 - 3*y2 + y3) + x0*(2*y1 - 3*y2 + y3) )
-    d4 = 9*( x2*(y0 - y1) + x0*(y1 - y2) + x1*(y2 - y0) )
-
+local function compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3, d2, d3, d4)
     local a, b, c =  d2^2, -d2*d3, d3^2 - d2*d4
     local n, t1, s1, t2, s2 = quadratic.quadratic(a, b, c)
     local out1, out2 = 0, 0
 
-    if n > 0 then out1 = t1/s1 end
-    if n > 1 then out2 = t2/s2 end
+    if n > 0 and s1 ~= 0 then out1 = t1/s1 end
+    if n > 1 and s2 ~= 0 then out2 = t2/s2 end
 
     print("Quadratic param: ", a, b, c)
     print("Roots: ", n, t1, s1, t2, s2)
@@ -114,6 +106,7 @@ local function compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3)
     out1, out2 = truncate_parameter(out1), truncate_parameter(out2)
 
     print("Double points: ", out1, out2)
+    print("----------------------------------")
 
     return out1, out2
 end
@@ -196,15 +189,6 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
 
         print("Second case")
 
-        --[[
-        if diag < 0 then --Left case
-            outx = u0
-            outy = (v2-v3)*(u0-u3)/(u2-u3) + v3
-        else
-            outx = (v0-v3)*(u2-u3)/(v2-v3) + u3
-            outy = v0
-        end ]]
-
         outx = u2
         outy = v2
     elseif u2 == u3 and v2 == v3 then
@@ -212,15 +196,6 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
         local diag = diagonal(u1,v1)
 
         print("Third case")
-
-        --[[
-        if diag < 0 then -- Left
-            outx = (v3-v0)*(u1-u0)/(v1-v0) + u0
-            outy = v3
-        else
-            outx = u3
-            outy = (v1-v0)*(u3-u0)/(u1-u0) + v0
-        end]]
 
         outx = u1
         outy = v1
@@ -602,12 +577,17 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
     local x2, y2 = data[offset+4], data[offset+5]
     local x3, y3 = data[offset+6], data[offset+7]
 
+    -- Cross product of control points
+    local d2 = 3*( x3*(2*y1 - y2 - y0) + x2*(2*y0 - 3*y1 + y3) + x0*(y1 - 2*y2 + y3) - x1*(y0 - 3*y2 + 2*y3) )
+    local d3 = 3*( (3*x2 - x3)*(y0 - y1) - x1*(2*y0 - 3*y2 + y3) + x0*(2*y1 - 3*y2 + y3) )
+    local d4 = 9*( x2*(y0 - y1) + x0*(y1 - y2) + x1*(y2 - y0) )
+
     -- Calculate maxima, double points and inflections
     local t = {}
     t[2], t[3] = compute_cubic_maxima(x0, x1, x2, x3)
     t[4], t[5] = compute_cubic_maxima(y0, y1, y2, y3)
-    t[6], t[7] = compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3)
-    t[8], t[9] = compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3) 
+    t[6], t[7] = compute_cubic_inflections(x0, y0, x1, y1, x2, y2, x3, y3, d2, d3, d4)
+    t[8], t[9] = compute_cubic_doublepoint(x0, y0, x1, y1, x2, y2, x3, y3, d2, d3, d4) 
     t[1], t[10] = 0, 1
 
     table.sort( t )
