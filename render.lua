@@ -385,27 +385,20 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
     -- Triangle test: compute intersection of tangents
     local inter_x, inter_y = compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, holder[n].diagonal)
 
-    local compute_implicit_line = function(x0, y0, x1, y1)
-        local imp_a, imp_b, imp_c
-        imp_a = y1 - y0
-        imp_b = x0 - x1
-        imp_c = -imp_a * x0 - imp_b * y0
-
-        return {imp_a, imp_b, imp_c}
+    local det22 = function(a, b, c, d)
+        return a*d - b*c
     end
 
-    local p12 = compute_implicit_line(u0, v0, u3, v3)
-    local p23 = compute_implicit_line(u3, v3, inter_x, inter_y)
-    local p31 = compute_implicit_line(inter_x, inter_y, u0, v0)
-
-    print("Triangle: ", u0, v0, u3, v3, inter_x, inter_y)
+    local triangle_det = det22(inter_x-u0, u3-u0, inter_y-v0, v3 - v0)
 
     holder[n].inside_triangle = function(x, y)
-        local eval1 = p12[1] * x + p12[2] * y + p12[3]
-        local eval2 = p23[1] * x + p23[2] * y + p23[3]
-        local eval3 = p31[1] * x + p31[2] * y + p31[3]
+        local a = det22(x - u0, u3 - u0, y - v0, v3 - v0)
+        local b = det22(inter_x - u0, x - u0, inter_y - v0, y - v0)
+        local d_sign = sign(triangle_det)
 
-        return (sign(eval1) == sign(eval2) and sign(eval2) == sign(eval3))
+        return d_sign * a > 0 and 
+            d_sign * b > 0 and 
+            d_sign * (a + b) < d_sign * triangle_det
     end
 
     -- Compute implicit function (missing sign test, degenerate test)
