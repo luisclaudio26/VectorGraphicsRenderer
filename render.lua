@@ -196,26 +196,34 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
 
         print("Second case")
 
+        --[[
         if diag < 0 then --Left case
             outx = u0
             outy = (v2-v3)*(u0-u3)/(u2-u3) + v3
         else
             outx = (v0-v3)*(u2-u3)/(v2-v3) + u3
             outy = v0
-        end
+        end ]]
+
+        outx = u2
+        outy = v2
     elseif u2 == u3 and v2 == v3 then
         -- Third case: dual to the second
         local diag = diagonal(u1,v1)
 
         print("Third case")
 
+        --[[
         if diag < 0 then -- Left
             outx = (v3-v0)*(u1-u0)/(v1-v0) + u0
             outy = v3
         else
             outx = u3
             outy = (v1-v0)*(u3-u0)/(u1-u0) + v0
-        end
+        end]]
+
+        outx = u1
+        outy = v1
     else
 
         print("Fourth case")
