@@ -203,7 +203,7 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
 
         print("Fourth case")
 
-        -- Fourth case: All points are different
+        -- Fourth case: All points are different - intersection of tangents
         outx = (u0*(u3*(-v1 + v2) + u2*(v1 - v3)) + u1*(u3*(v0 - v2) + u2*(-v0 + v3)))
         outx = outx / (-(u2 - u3)*(v0 - v1) + (u0 - u1)*(v2 - v3))
 
@@ -585,13 +585,45 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
 
     -- Watchout for degenerated cubics! (What about degenerating into a point?
     -- just ignoring it for a while)
-    if math.abs(d4) < epsilon then
-        local det1 = xform.xform(x0,y0,1,x1,y1,1,x2,y2,1) : det()
-        local det2 = xform.xform(x1,y1,1,x2,y2,1,x3,y3,1) : det()
+    
+    print(d2, d3, d4)
+    if d2 == 0 and d3 == 0 then
+        
+        print("DEGENERATED")
 
-        if det1 ~= 0 or det2 ~= 0 then
+        if d4 ~= 0 then
+            print("PUSHING QUADRATIC INSTEAD")
+
             -- Cubic degenerates into a quadratic (this code chunk should be
             -- merged with the one in push_quadratic_segment after)
+
+            local u0, v0, u1, v1, u2, v2
+            u0, v0, u2, v2 = x0, y0, x3, y3
+
+            -- intersection of tangents
+            u1 = (x0*(x3*(-y1 + y2) + x2*(y1 - y3)) + x1*(x3*(y0 - y2) + x2*(-y0 + y3)))
+            u1 = u1 / (-(x2 - x3)*(y0 - y1) + (x0 - x1)*(y2 - y3))
+
+            v1 = (x3*(y0 - y1)*y2 + x0*y1*y2 - x2*y0*y3 - x0*y1*y3 + x2*y1*y3 + x1*y0*(-y2 + y3))
+            v1 = v1 / (-(x2 - x3)*(y0 - y1) + (x0 - x1)*(y2 - y3))
+
+            -- Calculate maxima points
+            local t = {}
+            t[1], t[4] = 0, 1
+            t[2] = truncate_parameter( (u0-u1) / (u0 - 2*u1 + u2) )
+            t[3] = truncate_parameter( (v0-v1) / (v0 - 2*v1 + v2) )
+            table.sort( t )
+
+            -- Split bézier
+            for i = 2, 4 do
+                if t[i-1] ~= t[i] then
+                    local a, b, c, d, e, f = bezier.cut2(t[i-1], t[i], u0, v0, u1, v1, u2, v2)
+                    prepare_table.push_functions.quadratic_segment(a, b, c, d, e, f, primitives)
+                end
+            end
+
+            return
+
         else
             -- Cubic degenerates into a line
             print("PUSHING LINE INSTEAD")
