@@ -451,6 +451,7 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
             return eval
         end
     else
+        print("USANDO CASO DEGENERADO")
         local degenerate_cubic = compute_implicit_line(u0, v0, u3, v3)
         local imp_sign = sign(v3-v0)
         
@@ -582,9 +583,23 @@ function prepare_table.instructions.cubic_segment(shape, offset, iadd)
     local d3 = 3*( (3*x2 - x3)*(y0 - y1) - x1*(2*y0 - 3*y2 + y3) + x0*(2*y1 - 3*y2 + y3) )
     local d4 = 9*( x2*(y0 - y1) + x0*(y1 - y2) + x1*(y2 - y0) )
 
-    -- Watchout for degenerated cubics!
+    -- Watchout for degenerated cubics! (What about degenerating into a point?
+    -- just ignoring it for a while)
     if math.abs(d4) < epsilon then
-        print("DEGENERATED")
+        local det1 = xform.xform(x0,y0,1,x1,y1,1,x2,y2,1) : det()
+        local det2 = xform.xform(x1,y1,1,x2,y2,1,x3,y3,1) : det()
+
+        if det1 ~= 0 or det2 ~= 0 then
+            -- Cubic degenerates into a quadratic (this code chunk should be
+            -- merged with the one in push_quadratic_segment after)
+        else
+            -- Cubic degenerates into a line
+            print("PUSHING LINE INSTEAD")
+
+            prepare_table.push_functions.linear_segment(x0, y0, x3, y3, shape.primitives, true)
+
+            return
+        end
     end
 
     -- Calculate maxima, double points and inflections
