@@ -800,6 +800,20 @@ function prepare_table.prepare_paint.radialgradient(paint, scenexf)
     data.scene_to_grad = canonize * (to_grad : inverse()) * (scenexf : inverse())
 end
 
+function prepare_table.prepare_paint.texture(paint, scenexf)
+    local data, tex2scene = paint.data, paint.xf
+
+
+    print(data.image)
+
+    for k,v in pairs(data.image) do
+        print("aqui")
+        print(k, v)
+    end
+
+
+end
+
 -- prepare scene for sampling and return modified scene
 local function preparescene(scene)
 
@@ -1136,7 +1150,8 @@ local function checkscene(scene)
                element.shape.type == "polygon", "unsuported primitive")
         assert(element.paint.type == "solid" or
                element.paint.type == "lineargradient" or
-               element.paint.type == "radialgradient", "unsupported paint")
+               element.paint.type == "radialgradient" or
+               element.paint.type == "texture", "unsupported paint")
     end
 end
 
