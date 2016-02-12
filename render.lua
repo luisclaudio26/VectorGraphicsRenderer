@@ -451,19 +451,19 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
     holder[n].dysign = sign(v2 - v0)
 
     -- Translate to origin
-    print("Untransformed: ", u0, v0, u1, v1, w, u2, v2)
     local trans = xform.translate(-u0, -v0)
     u0, v0 = transform_point(u0, v0, trans)
     u1, v1, w = trans : apply(u1, v1, w)
     u2, v2 = transform_point(u2, v2, trans)
-    print("Transformed: ", u0, v0, u1, v1, w, u2, v2)
 
     holder[n].scene2origin = trans
 
     -- Triangle test: compute the diagonal cutting
     -- the bounding box in two triangles
-
     local compute_implicit_line = function(x0, y0, x1, y1)
+        
+        -- This function is repeated everywhere, we could put it
+        -- as global
         local a = y1 - y0
         local b = x0 - x1
         local c = -a * x0 - b * y0
@@ -472,12 +472,7 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
         return a*line_sign, b*line_sign, c*line_sign
     end
 
-    local diag_a = v2 - v0
-    local diag_b = u0 - u2
-    local diag_c = -diag_a * u0 - diag_b * v0
-    local diag_sign = sign(diag_a)
-    diag_a, diag_b, diag_c = diag_a*diag_sign, diag_b*diag_sign, diag_c*diag_sign
-
+    local diag_a, diag_b, diag_c = compute_implicit_line(u0, v0, u2, v2)
     holder[n].diagonal = function(x, y)
         return sign( diag_a*x + diag_b*y + diag_c )
     end
@@ -489,7 +484,6 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
 
     if det ~= 0 then
         local imp_sign = sign( 2*v2*(-u2*v1 + u1*v2) )
-        print("imp sign", imp_sign)
         holder[n].implicit = function(x, y)
 
             local eval = y*((4*u1^2 - 4*w*u1*u2 + u2^2)*y + 4*u1*u2*v1 - v2*4*u1^2)
@@ -502,9 +496,7 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
         end
 
     else
-        print("PUSHING A STRAIGHT LINE INSTEAD")
         local a, b, c = compute_implicit_line(u0, v0, u2, v2)
-
         holder[n].implicit = function(x, y)
             return a*x + b*y + c
         end
@@ -998,46 +990,19 @@ function sample_table.sample_path.rational_segment(primitive, x, y)
     if x > primitive.xmax then return 0 end
     if x <= primitive.xmin then return primitive.dysign end
 
-    print("Untransformed: ", x, y)
     x, y = transform_point(x, y, primitive.scene2origin)
-    print("Transformed: ", x, y)
 
     -- Triangle test
     local point_diagonal = primitive.diagonal(x, y)
     if point_diagonal == -primitive.mid_point_diagonal then
-
-        print("Skipping via diagonal test: ")
-        print(point_diagonal, primitive.mid_point_diagonal)
-        print("---------------")
-
         if point_diagonal < 0 then return primitive.dysign
         else return 0 end
     end
 
     -- Implicit test
-    local eval = primitive.implicit(x, y)
-
-    print("Evaluating: ", eval)
-    print("-----------------------")
-
-    if eval < 0 then
+    if primitive.implicit(x, y) < 0 then
         return primitive.dysign
     else return 0 end
-
-
-    --[[
-    -- Compute intersection
-    local func = function(t)
-        local bx, by, bw = bezier.at2rc(t, x0, y0, x1, y1, w, x2, y2)
-        return (by/bw - y)
-    end
-
-    local t_ = root_bisection(0, 1, func )
-    local x_, y_, w_ = bezier.at2rc(t_, x0, y0, x1, y1, w, x2, y2)
-    x_ = x_/w_
-
-    if x < x_ then return primitive.dysign
-    else return 0 end ]]
 end
 
 -----------------------------------------------------------------------------------------
