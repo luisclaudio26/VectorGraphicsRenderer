@@ -462,6 +462,16 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
 
     -- Triangle test: compute the diagonal cutting
     -- the bounding box in two triangles
+
+    local compute_implicit_line = function(x0, y0, x1, y1)
+        local a = y1 - y0
+        local b = x0 - x1
+        local c = -a * x0 - b * y0
+        local line_sign = sign(a)        
+
+        return a*line_sign, b*line_sign, c*line_sign
+    end
+
     local diag_a = v2 - v0
     local diag_b = u0 - u2
     local diag_c = -diag_a * u0 - diag_b * v0
@@ -475,17 +485,29 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
     holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at2rc(0.5, u0, v0, u1, v1, w, u2, v2) )
 
     -- Compute implicit equation
-    local imp_sign = sign( 2*v2*(-u2*v1 + u1*v2) )
-    print("imp sign", imp_sign)
-    holder[n].implicit = function(x, y)
+    local det = xform.xform(u0, v0, 1, u1, v1, w, u2, v2, 1) : det()
 
-        local eval = y*((4*u1^2 - 4*w*u1*u2 + u2^2)*y + 4*u1*u2*v1 - v2*4*u1^2)
-        eval = eval + x*(-4*u2*v1^2 + 4*u1*v1*v2 + 
-            y*(-8*u1*v1 + 4*w*u2*v1 + 4*w*u1*v2 - 2*u2*v2) + x*(4*v1^2 - 4*w*v1*v2 + v2^2))
+    if det ~= 0 then
+        local imp_sign = sign( 2*v2*(-u2*v1 + u1*v2) )
+        print("imp sign", imp_sign)
+        holder[n].implicit = function(x, y)
 
-        if imp_sign < 0 then eval = -eval end
+            local eval = y*((4*u1^2 - 4*w*u1*u2 + u2^2)*y + 4*u1*u2*v1 - v2*4*u1^2)
+            eval = eval + x*(-4*u2*v1^2 + 4*u1*v1*v2 + 
+                y*(-8*u1*v1 + 4*w*u2*v1 + 4*w*u1*v2 - 2*u2*v2) + x*(4*v1^2 - 4*w*v1*v2 + v2^2))
 
-        return eval
+            if imp_sign < 0 then eval = -eval end
+
+            return eval
+        end
+
+    else
+        print("PUSHING A STRAIGHT LINE INSTEAD")
+        local a, b, c = compute_implicit_line(u0, v0, u2, v2)
+
+        holder[n].implicit = function(x, y)
+            return a*x + b*y + c
+        end
     end
 
     -- Store transformed control points
