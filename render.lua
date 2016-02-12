@@ -454,7 +454,7 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
     print("Untransformed: ", u0, v0, u1, v1, w, u2, v2)
     local trans = xform.translate(-u0, -v0)
     u0, v0 = transform_point(u0, v0, trans)
-    u1, v1 = transform_point(u1, v1, trans)
+    u1, v1, w = trans : apply(u1, v1, w)
     u2, v2 = transform_point(u2, v2, trans)
     print("Transformed: ", u0, v0, u1, v1, w, u2, v2)
 
@@ -979,11 +979,6 @@ function sample_table.sample_path.rational_segment(primitive, x, y)
     print("Untransformed: ", x, y)
     x, y = transform_point(x, y, primitive.scene2origin)
     print("Transformed: ", x, y)
-
-    local x0, y0 = primitive.x0, primitive.y0
-    local x1, y1 = primitive.x1, primitive.y1
-    local x2, y2 = primitive.x2, primitive.y2
-    local w = primitive.w
 
     -- Triangle test
     local point_diagonal = primitive.diagonal(x, y)
