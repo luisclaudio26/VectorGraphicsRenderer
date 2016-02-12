@@ -444,14 +444,55 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
     local n = #holder + 1
     holder[n] = {}
     holder[n].type = "rational_segment"
+    
+    -- Compute bounding box without transforming vertices
+    holder[n].xmax, holder[n].xmin = max(u0, u2), min(u0, u2)
+    holder[n].ymax, holder[n].ymin = max(v0, v2), min(v0, v2)
+    holder[n].dysign = sign(v2 - v0)
+
+    -- Translate to origin
+    print("Untransformed: ", u0, v0, u1, v1, w, u2, v2)
+    local trans = xform.translate(-u0, -v0)
+    u0, v0 = transform_point(u0, v0, trans)
+    u1, v1 = transform_point(u1, v1, trans)
+    u2, v2 = transform_point(u2, v2, trans)
+    print("Transformed: ", u0, v0, u1, v1, w, u2, v2)
+
+    holder[n].scene2origin = trans
+
+    -- Triangle test: compute the diagonal cutting
+    -- the bounding box in two triangles
+    local diag_a = v2 - v0
+    local diag_b = u0 - u2
+    local diag_c = -diag_a * u0 - diag_b * v0
+    local diag_sign = sign(diag_a)
+    diag_a, diag_b, diag_c = diag_a*diag_sign, diag_b*diag_sign, diag_c*diag_sign
+
+    holder[n].diagonal = function(x, y)
+        return sign( diag_a*x + diag_b*y + diag_c )
+    end
+
+    holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at2rc(0.5, u0, v0, u1, v1, w, u2, v2) )
+
+    -- Compute implicit equation
+    local imp_sign = sign( 2*v2*(-u2*v1 + u1*v2) )
+    print("imp sign", imp_sign)
+    holder[n].implicit = function(x, y)
+
+        local eval = y*((4*u1^2 - 4*w*u1*u2 + u2^2)*y + 4*u1*u2*v1 - v2*4*u1^2)
+        eval = eval + x*(-4*u2*v1^2 + 4*u1*v1*v2 + 
+            y*(-8*u1*v1 + 4*w*u2*v1 + 4*w*u1*v2 - 2*u2*v2) + x*(4*v1^2 - 4*w*v1*v2 + v2^2))
+
+        if imp_sign < 0 then eval = -eval end
+
+        return eval
+    end
+
+    -- Store transformed control points
     holder[n].x0, holder[n].y0 = u0, v0
     holder[n].x1, holder[n].y1 = u1, v1
     holder[n].x2, holder[n].y2 = u2, v2
     holder[n].w = w
-
-    holder[n].xmax, holder[n].xmin = max(u0, u2), min(u0, u2)
-    holder[n].ymax, holder[n].ymin = max(v0, v2), min(v0, v2)
-    holder[n].dysign = sign(v2 - v0)
 end
 
 --------------------------------
@@ -928,19 +969,50 @@ function sample_table.sample_path.cubic_segment(primitive, x, y)
 end
 
 function sample_table.sample_path.rational_segment(primitive, x, y)
+
+    -- This function is essentialy the same as quadratic_segment(), so we
+    -- could fusion both
     if y >= primitive.ymax or y < primitive.ymin then return 0 end
     if x > primitive.xmax then return 0 end
     if x <= primitive.xmin then return primitive.dysign end
+
+    print("Untransformed: ", x, y)
+    x, y = transform_point(x, y, primitive.scene2origin)
+    print("Transformed: ", x, y)
 
     local x0, y0 = primitive.x0, primitive.y0
     local x1, y1 = primitive.x1, primitive.y1
     local x2, y2 = primitive.x2, primitive.y2
     local w = primitive.w
 
+    -- Triangle test
+    local point_diagonal = primitive.diagonal(x, y)
+    if point_diagonal == -primitive.mid_point_diagonal then
+
+        print("Skipping via diagonal test: ")
+        print(point_diagonal, primitive.mid_point_diagonal)
+        print("---------------")
+
+        if point_diagonal < 0 then return primitive.dysign
+        else return 0 end
+    end
+
+    -- Implicit test
+    local eval = primitive.implicit(x, y)
+
+    print("Evaluating: ", eval)
+    print("-----------------------")
+
+    if eval < 0 then
+        return primitive.dysign
+    else return 0 end
+
+
+    --[[
     -- Compute intersection
     local func = function(t)
         local bx, by, bw = bezier.at2rc(t, x0, y0, x1, y1, w, x2, y2)
-        return (by/bw - y) 
+        return (by/bw - y)
     end
 
     local t_ = root_bisection(0, 1, func )
@@ -948,7 +1020,7 @@ function sample_table.sample_path.rational_segment(primitive, x, y)
     x_ = x_/w_
 
     if x < x_ then return primitive.dysign
-    else return 0 end
+    else return 0 end ]]
 end
 
 -----------------------------------------------------------------------------------------
