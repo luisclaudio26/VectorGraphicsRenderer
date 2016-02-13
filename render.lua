@@ -1093,30 +1093,16 @@ function sample_table.sample_paint.radialgradient(paint, x, y)
 end
 
 function sample_table.sample_paint.texture(paint, x, y)
-    -- How to use IMAGE object:
-    -- r, g, b = data.image:get(1, 1) 
-    -- data.image.width
-
     local data = paint.data
     local img = data.image
 
-    print("Untransformed: ", x, y)
     x, y = transform_point(x, y, paint.scene2tex)
-    print("Transformed: ", x, y)
 
-    -- We'll wrap/sample/interpolate in x, y
     local wrapped_x = sample_table.sample_paint.spread_table[data.spread](x)
     local wrapped_y = sample_table.sample_paint.spread_table[data.spread](y)
 
-    print("Wrapped: ", wrapped_x, wrapped_y)
-
     local tex_x = wrapped_x * img.width 
     local tex_y = wrapped_y * img.height
-
-    print(img.width, img.height)
-
-    print("Image coordinate: ", tex_x, tex_y)
-    print("-----------------------------------")
 
     -- Use nearest neighbour
     local tex_x, tex_y = ceil(tex_x), ceil(tex_y)
