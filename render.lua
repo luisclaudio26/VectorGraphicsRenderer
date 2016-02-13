@@ -3,7 +3,7 @@ local image = require"image"
 local chronos = require"chronos"
 
 local bezier, quadratic = require("lua.bezier"), require("lua.quadratic")
-local xform = require("xform")
+local xform, noise = require("xform"), require("blue")
 local unpack, pack = table.unpack, table.pack
 local max, min = math.max, math.min 
 local floor, ceil = math.floor, math.ceil
@@ -1163,9 +1163,11 @@ function sample_table.polygon(element, x, y)
 end
 
 -- sample scene at x,y and return r,g,b,a
-local function sample(scene, x, y)
+local function sample_point(scene, x, y)
 
     -- Deep copy of BGColor
+    -- this is extremely slow and unnecessary! Must think in a way
+    -- of removing this
     local out = {}
     for i, v in ipairs(BGColor) do
         out[i] = v
@@ -1179,6 +1181,7 @@ local function sample(scene, x, y)
         if temp ~= BGColor then
 
             -- Alpha blend current color with new layer
+            -- This uses no premultiplication! Slow
             for j = 1, 3 do 
                 out[j] = alpha_composite(temp[j], temp[4], out[j], out[4])
             end
@@ -1187,7 +1190,38 @@ local function sample(scene, x, y)
         end
     end
 
-    return unpack(out)
+    return out
+end
+
+-- Here we'll supersample each pixel
+local function sample(scene, x, y)
+
+    local samples = {}
+    local pattern = noise[8]
+
+    for i = 1, #pattern, 2 do
+        local ind = (i+1)/2
+        local dx, dy = pattern[i], pattern[i+1]
+
+        samples[ind] = {}
+        samples[ind] = sample_point(scene, x + dx, y + dy)
+    end
+
+    -- Get arithmetic average of samples
+    -- do different averages/filters produce better results?
+    -- e.g. gaussian filter
+    local sum = {0,0,0,0}
+    for i = 1, #samples do
+        for j = 1, 4 do
+            sum[j] = sum[j] + samples[i][j]
+        end
+    end
+
+    for j = 1, 4 do
+        sum[j] = sum[j] / #samples
+    end
+
+    return unpack(sum)
 end
 
 -----------------------------------------------------------------------------------------
