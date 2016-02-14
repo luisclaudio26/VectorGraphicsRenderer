@@ -191,6 +191,15 @@ local function compute_tangent_intersection(u0, v0, u1, v1, u2, v2, u3, v3, diag
     return outx, outy
 end
 
+local function compute_implicit_line(x0, y0, x1, y1)
+    local a = y1 - y0
+    local b = x0 - x1
+    local c = - a * x0 - b * y0
+    local dysign = sign(a)
+
+    return a*dysign, b*dysign, c*dysign
+end
+
 -----------------------------------------------------------------------------------------
 -------------------------------- PATH PREPROCESSING -------------------------------------
 -----------------------------------------------------------------------------------------
@@ -216,17 +225,12 @@ function prepare_table.push_functions.linear_segment(x0, y0, x1, y1, holder, vir
     holder[n].x1, holder[n].y1 = x1, y1
 
     -- Precompute implicit equation and bounding box
-    local a = y1 - y0
-    local b = x0 - x1
-    local c = -a * x0 - b * y0
-    local dysign = sign(a)
-    a, b, c = a*dysign, b*dysign, c*dysign
+    holder[n].a, holder[n].b, holder[n].c = compute_implicit_line(x0, y0, x1, y1)
 
     local xmin, xmax = min(x0, x1), max(x0, x1)
     local ymin, ymax = min(y0, y1), max(y0, y1)
 
-    holder[n].a, holder[n].b, holder[n].c = a, b, c
-    holder[n].dysign = dysign
+    holder[n].dysign = sign( y1 - y0 )
     holder[n].xmin, holder[n].xmax = xmin, xmax
     holder[n].ymin, holder[n].ymax = ymin, ymax
 end
@@ -267,11 +271,18 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
     -- the bounding box in two triangles
     local diag_a = v2 - v0
     local diag_b = u0 - u2
-    local diag_c = -diag_a * u0 - diag_b * v0
+    local diag_c = - diag_a * u0 - diag_b * v0
     local diag_sign = sign(diag_a)
     diag_a, diag_b, diag_c = diag_a*diag_sign, diag_b*diag_sign, diag_c*diag_sign
 
+    local a, b, c = compute_implicit_line(u0, v0, u2, v2)
+    
+    print("Before: ", diag_a, diag_b, diag_c)
+    print("After: ", a, b, c)
+    print("-------------")
+
     holder[n].diagonal = function(x, y)
+        print("Using: ", diag_a, diag_b, diag_c)
         return sign( diag_a*x + diag_b*y + diag_c )
     end
 
