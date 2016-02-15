@@ -294,21 +294,7 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
             return eval 
         end
     else
-        imp = function(x, y)
-            local p0, p1 = {}, {}
-            p0[0], p1[0] = u0, u2
-            p0[1], p1[1] = v0, v2
-
-            local imp_a, imp_b, imp_c
-            imp_a = p1[1] - p0[1]
-            imp_b = p0[0] - p1[0]
-            imp_c = -imp_a * p0[0] - imp_b * p0[1]
-
-            local imp_sign = sign(imp_a)
-            imp_a, imp_b, imp_c = imp_a*imp_sign, imp_b*imp_sign, imp_c*imp_sign
-
-            return imp_a * x + imp_b * y + imp_c
-        end
+        imp = holder[n].diagonal
     end
 
     holder[n].implicit = imp
