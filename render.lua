@@ -432,18 +432,6 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
 
     -- Triangle test: compute the diagonal cutting
     -- the bounding box in two triangles
-    local compute_implicit_line = function(x0, y0, x1, y1)
-        
-        -- This function is repeated everywhere, we could put it
-        -- as global
-        local a = y1 - y0
-        local b = x0 - x1
-        local c = -a * x0 - b * y0
-        local line_sign = sign(a)        
-
-        return a*line_sign, b*line_sign, c*line_sign
-    end
-
     local diag_a, diag_b, diag_c = compute_implicit_line(u0, v0, u2, v2)
     holder[n].diagonal = function(x, y)
         return sign( diag_a*x + diag_b*y + diag_c )
@@ -468,10 +456,7 @@ function prepare_table.push_functions.rational_quadratic_segment(u0, v0, u1, v1,
         end
 
     else
-        local a, b, c = compute_implicit_line(u0, v0, u2, v2)
-        holder[n].implicit = function(x, y)
-            return a*x + b*y + c
-        end
+        holder[n].implicit = holder[n].diagonal
     end
 
     -- Store transformed control points
