@@ -269,21 +269,10 @@ function prepare_table.push_functions.quadratic_segment(u0, v0, u1, v1, u2, v2, 
 
     -- Triangle test: compute the diagonal cutting
     -- the bounding box in two triangles
-    local diag_a = v2 - v0
-    local diag_b = u0 - u2
-    local diag_c = - diag_a * u0 - diag_b * v0
-    local diag_sign = sign(diag_a)
-    diag_a, diag_b, diag_c = diag_a*diag_sign, diag_b*diag_sign, diag_c*diag_sign
-
     local a, b, c = compute_implicit_line(u0, v0, u2, v2)
-    
-    print("Before: ", diag_a, diag_b, diag_c)
-    print("After: ", a, b, c)
-    print("-------------")
 
     holder[n].diagonal = function(x, y)
-        print("Using: ", diag_a, diag_b, diag_c)
-        return sign( diag_a*x + diag_b*y + diag_c )
+        return sign( a*x + b*y + c )
     end
 
     holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at2(0.5, u0, v0, u1, v1, u2, v2) )
