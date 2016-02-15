@@ -330,14 +330,10 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
 
     -- Triangle test: compute the diagonal cutting
     -- the bounding box in two triangles
-    local diag_a = v3 - v0
-    local diag_b = u0 - u3
-    local diag_c = -diag_a * u0 - diag_b * v0
-    local diag_sign = sign(diag_a)
-    diag_a, diag_b, diag_c = diag_a*diag_sign, diag_b*diag_sign, diag_c*diag_sign
+    local a, b, c = compute_implicit_line(u0, v0, u3, v3)
 
     holder[n].diagonal = function(x, y)
-        return sign( diag_a*x + diag_b*y + diag_c )
+        return sign( a*x + b*y + c )
     end
 
     holder[n].mid_point_diagonal = holder[n].diagonal( bezier.at3(0.5, u0, v0, u1, v1, u2, v2, u3, v3) )
@@ -403,17 +399,7 @@ function prepare_table.push_functions.cubic_segment(u0, v0, u1, v1, u2, v2, u3, 
         -- Seems like it is possible to cut a non-degenerate cubic in a way that
         -- the segment is degenerated. Is there a better way to solve this (instead
         -- of repeating code) ?
-        local a = v3 - v0
-        local b = u0 - u3
-        local c = -a * u0 - b * v0
-        local imp_sign = sign(a)
-
-        a, b, c = a*imp_sign, b*imp_sign, c*imp_sign
-        
-        imp = function(x, y)
-            return a*x + b*y + c
-        end
-
+        imp = holder[n].diagonal
     end
 
     holder[n].implicit = imp
