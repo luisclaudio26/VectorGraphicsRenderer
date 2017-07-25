@@ -10,10 +10,10 @@ Type1 and TrueType font examples. The first uses cubic Bézier curves while the 
 
 ## Overview
 
-This is the final product from the 2D Computer Graphics summer course I took on the Institute of Pure and Applied Mathematics (IMPA). The course covered a broad range of topics, including Bézier curves (and its implicitization), texture mapping, anti-aliasing and acceleration structures and in the end we produced a renderer which could take SVG illustrations and render it.
+This is the final product from the 2D Computer Graphics summer course I took on the [Institute of Pure and Applied Mathematics (IMPA)](https://impa.br/). The course covered a broad range of topics, including Bézier curves (and its implicitization), texture mapping, anti-aliasing and acceleration structures and in the end we produced a renderer which could take SVG illustrations and render it.
 Obviously the renderer could not support all the features .SVG is able to describe (stroking, for example), as this was a didactic project.
 
-This code depends on the (awesome) framework provided by prof. Diego Nehab and for such the only file available here was the one I wrote for the assignments, which contains the inside-outside tests, gradient painting, etc.
+This code depends on the (awesome) framework provided by prof. Diego Nehab and for such the only file available here was the one I wrote for the assignments, which contains the inside-outside tests, gradient painting, etc. In [Prof. Nehab's page](http://w3.impa.br/~diego/teaching/index.html) one can (usually) find the page for the latest 2D Computer Graphics course offered, where there's a detailed syllabus.
 
 I was awarded a grade A in the end of the course and it was certainly the best academic experience I ever had.
 
