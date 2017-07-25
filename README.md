@@ -1,8 +1,8 @@
 # Vector Graphics Renderer
 
-<img src="https://github.com/luisclaudio26/VectorGraphicsRenderer/raw/master/dancer.png" width="200">  <img src="https://github.com/luisclaudio26/VectorGraphicsRenderer/raw/master/drops.png" width="400">
+<img src="https://github.com/luisclaudio26/VectorGraphicsRenderer/raw/master/dancer.png" width="200">  <img src="https://github.com/luisclaudio26/VectorGraphicsRenderer/raw/master/drops.png" width="300">   <img src="https://github.com/luisclaudio26/VectorGraphicsRenderer/raw/master/out.png" width="200">
 
-Dancer and Drops illustrations, which took 57s and 276s, respectively.
+Dancer, Drops and Bunny illustrations, which took 57s, 276s and 56s, respectively.
 
 <img src="https://github.com/luisclaudio26/VectorGraphicsRenderer/raw/master/hello-type1.png" width="200">    <img src="https://github.com/luisclaudio26/VectorGraphicsRenderer/raw/master/hello-ttf.png" width="200">
 
